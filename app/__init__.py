@@ -20,6 +20,7 @@ def create_app(test_configuration=None):
     app.config.from_object(configuration_switch["dev"])
 
 
+
     api.init_app(app)
     db.init_app(app)
     ma.init_app(app)

@@ -4,4 +4,4 @@ from app.database import db
 # APIs
 from app.apis.sample import sample_api
 
-app = create_app()
+application = create_app()

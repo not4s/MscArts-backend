@@ -1,9 +1,7 @@
 from app import api
 from app.database import db 
-from flask import request, abort, jsonify
+from flask import request, abort
 from flask_restx import Resource
-
-
 
 # Database
 from app.models.example import SampleData
@@ -19,7 +17,7 @@ class TestApi(Resource):
     def get(self):
         data = SampleData.query.all()
         result = [sample_data_serializer.dump(d) for d in data]
-        return result
+        return result, 200
 
     def post(self):
         if not request.is_json:
