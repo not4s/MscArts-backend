@@ -1,5 +1,7 @@
 # Database
 app/dev.db
+app/staging.db
+migrations/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

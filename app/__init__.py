@@ -1,3 +1,5 @@
+import os
+
 from flask import Flask
 from flask_restx import Api
 from flask_marshmallow import Marshmallow
@@ -10,6 +12,8 @@ configuration_switch = {
     "production": f"{__name__}.config.ProductionConfig",  # Production configuration
 }
 
+environment = os.environ.get("ENV", "dev")
+
 
 app = Flask(__name__)
 api = Api()
@@ -17,13 +21,12 @@ ma = Marshmallow()
 
 def create_app(test_configuration=None):
 
-    app.config.from_object(configuration_switch["dev"])
-
-
+    app.config.from_object(configuration_switch[environment])
 
     api.init_app(app)
     db.init_app(app)
     ma.init_app(app)
+
     with app.app_context():
         db_migrator.init_app(
             app,
@@ -33,6 +36,5 @@ def create_app(test_configuration=None):
         )
 
         db.create_all()
-
 
     return app

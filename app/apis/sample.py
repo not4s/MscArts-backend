@@ -7,7 +7,7 @@ from flask_restx import Resource
 from app.models.example import SampleData
 from app.schemas.example import SampleDataSchema
 
-sample_api = api.namespace("sample", description="Test API")
+sample_api = api.namespace("api/sample", description="Test API")
 
 sample_data_serializer = SampleDataSchema()
 
@@ -23,7 +23,6 @@ class TestApi(Resource):
         if not request.is_json:
             abort(406, description="NOT JSON")
 
-        # print(request.json["count"])
         data = { 'message': 'in progress' }
 
         new_sample_data = SampleData(count=request.json["count"])

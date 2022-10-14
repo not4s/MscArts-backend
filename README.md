@@ -11,5 +11,16 @@ To download all the required dependencies:
 In a local development environment, the app can then be run directly with flask (by default on localhost, port 5000).
 To do so, run:
 ```
+(venv) $ flask db init
+(venv) $ flask db migrate
+(venv) $ flask db upgrade
 (venv) $ flask run
+```
+
+## Using PostgreSQL
+```
+(venv) $ export ENV=staging
+(venv) $ export STAGING_DB=<db>
+(venv) $ export STAGING_DB_USER=<username>
+(venv) $ export STAGING_DB_PASSWORD=<password>
 ```

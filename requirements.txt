@@ -8,3 +8,4 @@ flask-SQLAlchemy==2.5.1
 flask-Migrate==3.1.0
 flask-Marshmallow==0.14.0
 marshmallow-SQLAlchemy==0.28.1
+psycopg2==2.9.4
