@@ -7,7 +7,7 @@ from flask_restx import Resource
 from app.models.applicant import Program
 from app.schemas.applicant import ProgramSchema
 
-program_api = api.namespace("program", description="Program API")
+program_api = api.namespace("api/program", description="Program API")
 
 program_data_serializer = ProgramSchema()
 

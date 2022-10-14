@@ -7,7 +7,7 @@ from flask_restx import Resource
 
 from werkzeug.utils import secure_filename
 
-upload_api = api.namespace("upload", description="Test API")
+upload_api = api.namespace("api/upload", description="Test API")
 
 ALLOWED_EXTENSIONS = { 'xlsx', 'csv' }
 
