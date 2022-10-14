@@ -15,7 +15,7 @@ class Applicant(db.Model):
     gender = db.Column(db.String(10))
     nationality = db.Column(db.String(100))
     email = db.Column(db.String(120))
-    fee_status = db.Column(db.Integer)
+    fee_status = db.Column(db.String(20))
     program_code = db.Column(db.String(10), ForeignKey("program.code"))
 
 class ApplicantStatus(db.Model):
@@ -28,6 +28,6 @@ class ApplicantStatus(db.Model):
     department_status = db.Column(db.String(80))
     special_case_status = db.Column(db.String(80))
     proposed_decision = db.Column(db.String(30))
-    submitted = db.Column(db.Time)
+    submitted = db.Column(db.Date)
     marked_complete = db.Column(db.Date)
 
