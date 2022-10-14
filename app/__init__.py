@@ -1,10 +1,11 @@
 import os
 
+from dotenv import load_dotenv
 from flask import Flask
 from flask_restx import Api
 from flask_marshmallow import Marshmallow
 
-from .database import db, db_migrator 
+from .database import db, db_migrator
 
 configuration_switch = {
     "dev": f"{__name__}.config.DevConfig",  # Development configuration (fake LDAP)
@@ -12,12 +13,16 @@ configuration_switch = {
     "production": f"{__name__}.config.ProductionConfig",  # Production configuration
 }
 
+load_dotenv()
 environment = os.environ.get("ENV", "dev")
+print(os.environ)
+print(f"Environment is {environment}")
 
 
 app = Flask(__name__)
 api = Api()
 ma = Marshmallow()
+
 
 def create_app(test_configuration=None):
 

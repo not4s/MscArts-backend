@@ -1,5 +1,7 @@
 #! /bin/bash
-
+echo "ENV $ENV"
+echo "DB $STAGING_DB"
+echo "HOST $STAGING_DB_HOST"
 
 touch $HOME/gunicorn-access-log.txt
 if pgrep -x gunicorn > /dev/null
@@ -10,7 +12,7 @@ then
     echo "Gunicorn executed with code $EXIT_CODE." | tee gunicorn-log.txt -a
 else
     echo 'Gunicorn starting...' | tee gunicorn-log.txt -a
-    venv/bin/gunicorn wsgi \
+    gunicorn wsgi \
         --bind 0.0.0.0:5000 \
         --pid $HOME/gunicorn.pid \
         --log-file $HOME/gunicorn-log.txt \

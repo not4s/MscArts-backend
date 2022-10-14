@@ -8,6 +8,12 @@ testing:
     - echo "Testing"
 
 staging:
+  variables:
+    ENV: staging
+    STAGING_DB: $STAGING_DB
+    STAGING_DB_HOST: $STAGING_DB_HOST
+    STAGING_DB_USER: $STAGING_DB_USER
+    STAGING_DB_PASSWORD: $STAGING_DB_PASSWORD
   stage: staging
   script:
     - python3.8 -m venv venv

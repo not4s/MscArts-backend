@@ -9,3 +9,4 @@ flask-Migrate==3.1.0
 flask-Marshmallow==0.14.0
 marshmallow-SQLAlchemy==0.28.1
 psycopg2==2.9.4
+python-dotenv==0.21.0
