@@ -16,3 +16,11 @@ To do so, run:
 (venv) $ flask db upgrade
 (venv) $ flask run
 ```
+
+## Using PostgreSQL
+```
+(venv) $ export ENV=staging
+(venv) $ export STAGING_DB=<db>
+(venv) $ export STAGING_DB_USER=<username>
+(venv) $ export STAGING_DB_PASSWORD=<password>
+```

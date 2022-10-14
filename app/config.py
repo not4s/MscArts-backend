@@ -16,7 +16,6 @@ class StagingConfig(BaseConfig):
 
     if STAGING_DB_PASSWORD is not None and STAGING_DB_USER is not None and STAGING_DB is not None:
         SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{STAGING_DB_USER}:{STAGING_DB_PASSWORD}@db.doc.ic.ac.uk:5432/{STAGING_DB}"
-        print(SQLALCHEMY_DATABASE_URI)
     else:
         SQLALCHEMY_DATABASE_URI = "sqlite:///staging.db"
         
