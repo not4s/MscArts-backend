@@ -24,10 +24,10 @@ class ApplicantStatus(db.Model):
     supplemental_complete = db.Column(db.Boolean)
     academic_eligibility = db.Column(db.String(80))
     folder_status = db.Column(db.String(80))
-    date_to_department = db.column(db.Time)
+    date_to_department = db.Column(db.Date)
     department_status = db.Column(db.String(80))
     special_case_status = db.Column(db.String(80))
     proposed_decision = db.Column(db.String(30))
     submitted = db.Column(db.Time)
-    marked_complete = db.Column(db.Time)
+    marked_complete = db.Column(db.Date)
 

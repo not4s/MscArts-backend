@@ -37,10 +37,4 @@ def create_app(test_configuration=None):
 
         db.create_all()
 
-        print(db)
-
-    # from alembic import op
-
-    # op.bulk_insert()
-
     return app
