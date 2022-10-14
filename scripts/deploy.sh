@@ -1,7 +1,5 @@
 #! /bin/bash
-echo "ENV $ENV"
-echo "DB $STAGING_DB"
-echo "HOST $STAGING_DB_HOST"
+echo "Environment is $ENV"
 
 touch $HOME/gunicorn-access-log.txt
 if pgrep -x gunicorn > /dev/null
