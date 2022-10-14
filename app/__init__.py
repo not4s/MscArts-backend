@@ -1,6 +1,7 @@
 import os
 
 from flask import Flask
+from flask_cors import CORS
 from flask_restx import Api
 from flask_marshmallow import Marshmallow
 
@@ -16,6 +17,7 @@ environment = os.environ.get("ENV", "dev")
 
 
 app = Flask(__name__)
+cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 api = Api()
 ma = Marshmallow()
 
