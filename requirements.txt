@@ -10,3 +10,5 @@ flask-Marshmallow==0.14.0
 marshmallow-SQLAlchemy==0.28.1
 psycopg2==2.9.4
 flask-CORS==3.0.10
+pandas==1.4.2
+faker==15.1.1
