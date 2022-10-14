@@ -1,0 +1,21 @@
+stages:
+  - test
+  - staging
+
+testing:
+  stage: test
+  script:
+    - echo "Testing"
+
+staging:
+  stage: staging
+  script:
+    - python3.8 -m venv venv
+    - source venv/bin/activate
+    - pip install --upgrade pip && pip install -r requirements.txt
+    - ./scripts/deploy.sh
+  environment:
+    name: staging
+    url: http://146.169.43.35:5000/
+  only:
+    - master
