@@ -11,5 +11,8 @@ To download all the required dependencies:
 In a local development environment, the app can then be run directly with flask (by default on localhost, port 5000).
 To do so, run:
 ```
+(venv) $ flask db init
+(venv) $ flask db migrate
+(venv) $ flask db upgrade
 (venv) $ flask run
 ```
