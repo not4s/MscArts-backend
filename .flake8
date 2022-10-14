@@ -1,0 +1,10 @@
+[flake8]
+# E501: line too long
+# H202: assertRaises Exception too broad
+# H306: imports not in alphabetical order (time, os)
+# W292: no newline at the end of file
+# F821: undefined name
+# F401: module imported but not used
+ignore = W292,W503,H202,H306,E501,E203,F821,F401
+max_line_length = 88
+extend_exclude = venv/,__pycache__,.ini
