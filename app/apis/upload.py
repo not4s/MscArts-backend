@@ -4,7 +4,7 @@ from app import api
 from app.database import db
 from flask import request, abort
 from flask_restx import Resource
-from utils.parser import parse
+from app.utils.parser import parse
 
 from werkzeug.utils import secure_filename
 
@@ -32,7 +32,7 @@ class UploadApi(Resource):
 
         if file and validate_file(file):
             filename = secure_filename(file.filename)
-            parse(filename)
+            parse(file, is_csv=file.filename.endswith(".csv"))
             # file.save(os.path.join('/apis', filename))
 
         data = {"message": "file uploaded"}
