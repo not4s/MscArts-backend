@@ -23,7 +23,26 @@ def to_csv(filename):
     print('File is not of any of the supported formats: Expected .csv, .xlsx or .xls')
 
 
+'''
+  Parser
 
+  - Use Cases:
+      Gender
+      Nationality
+      Programme Code = Academic Program
+      Academic Level
+      Application Status
+      Supplemental Items Complete
+      Academic Eligibility
+      Folder Status
+      Department Processing Status
+      Proposed Decision 
+
+    Every parser inherits the Parser interface which has two methods:
+      parse and update
+
+    The Parsed dataframes are stored as a class member to avoid redundant parsing.
+'''
 class Parser:
 
   def __init__(self, filename):
