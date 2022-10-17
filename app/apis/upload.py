@@ -32,7 +32,8 @@ class UploadApi(Resource):
 
         if file and validate_file(file):
             filename = secure_filename(file.filename)
-            Parser.parse(file, is_csv=file.filename.endswith(".csv"))
+            df = Parser.to_csv(file, is_csv=file.filename.endswith('.csv'))
+            Parser.insert_into_database(df)
             # file.save(os.path.join('/apis', filename))
 
         data = {"message": "file uploaded"}

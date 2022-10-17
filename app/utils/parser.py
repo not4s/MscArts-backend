@@ -3,11 +3,12 @@ import pandas as pd
 from enum import Enum
 from datetime import datetime
 from app.database import db 
+from faker import Faker
 from app.models.applicant import Applicant, ApplicantStatus, Program
 
 
 # File extension check
-def to_csv(filename):
+def to_csv(filename, is_csv):
 
   col_names = ['Anticipated Entry Term', 'Erpid', 'Prefix', \
                'First Name', 'Last Name', 'Gender', 'Birth Date', \
@@ -19,13 +20,10 @@ def to_csv(filename):
                'Department Processing Status', 'Special Case Status', \
                'Proposed Decision', 'Submitted Date', 'Marked Complete Date']
 
-  try:
-    if filename.endswith('.csv'):
-      return pd.read_csv(filename, names=col_names, header=None)
-    elif filename.endswith('.xlsx') or filename.endswith('.xls'):
-      return pd.read_excel(filename, names=col_names, header=None)
-  except ValueError:
-    print('File is not of any of the supported formats: Expected .csv, .xlsx or .xls')
+  if (is_csv):
+    return pd.read_csv(filename, names=col_names, header=None, keep_default_na=False)
+  else:
+    return pd.read_excel(filename, names=col_names, header=None, keep_default_na=False)
 
 def convert_time(time_str):
     if type(time_str) is datetime:
@@ -38,41 +36,45 @@ def convert_time(time_str):
 
 # inserts values in the given dataframe to the database
 def insert_into_database(df):
+    fake = Faker()
+    Faker.seed(137920)
     new_data = []
     new_program_code = []
     count = 0
-    program_codes = db.session.query(Program.code).all()
-    print(program_codes)
-    for x in df.index:
+
+    df = df.dropna(how='all')
+    program_codes = list(map(lambda x: x.code, Program.query.all()))
+    for index, row in df.iterrows():
         if count == 0:
             count += 1
             continue
+        
+        f_name = row["First Name"] if row["First Name"] != "" else fake.first_name()
+        l_name = row["Last Name"] if row["Last Name"] != "" else fake.last_name()
+        email = row["Email"] if row["Email"] != "" else f'{f_name}.{l_name}@{fake.domain_name()}'
+        # b_date = fake.date_between_dates(date_start=datetime(1980,1,1), date_end=datetime(2005,12,31)).year
 
-        print(df.iloc[x])
-        print(type(df.iloc[x]))
-
-        program_code = df.loc[x, "Programme Code"]
-        if (program_code,) not in program_codes:
+        program_code = row["Programme Code"]
+        if program_code not in program_codes:
             new_program_code.append(
                 Program(
                     code=program_code,
-                    name=df.loc[x, "Academic Program"],
-                    application_type=df.loc[x, "Type"],
+                    name=row["Academic Program"],
+                    application_type=row["Type"],
                 )
             )
             program_codes.append(program_code)
-            print(program_codes)
 
         new_data.append(
             Applicant(
                 erpid=count,
-                prefix=df.loc[x, "Prefix"],
-                first_name=df.loc[x, "First Name"],
-                last_name=df.loc[x, "Last Name"],
-                gender=df.loc[x, "Gender"],
-                nationality=df.loc[x, "Nationality"],
-                email=df.loc[x, "Email Address"],
-                fee_status=df.loc[x, "Fee Status"],
+                prefix=row["Prefix"],
+                first_name=f_name,
+                last_name=l_name,
+                gender=row["Gender"],
+                nationality=row["Nationality"],
+                email=email,
+                fee_status=row["Fee Status"],
                 program_code=program_code,
             )
         )
@@ -80,17 +82,16 @@ def insert_into_database(df):
         new_data.append(
             ApplicantStatus(
                 id=count,
-                status=df.loc[x, "Application Status"],
-                supplemental_complete="yes"
-                in df.loc[x, "Supplemental Items Complete"].lower(),
-                academic_eligibility=df.loc[x, "Academic Eligibility"],
-                folder_status=df.loc[x, "Folder Status"],
-                date_to_department=convert_time(df.loc[x, "Date Sent to Department"]),
-                department_status=df.loc[x, "Department Processing Status"],
-                special_case_status=df.loc[x, "Special Case Status"],
-                proposed_decision=df.loc[x, "Proposed Decision"],
-                submitted=convert_time(df.loc[x, "Submitted Date"]),
-                marked_complete=convert_time(df.loc[x, "Marked Complete Date"]),
+                status=row["Application Status"],
+                supplemental_complete="Yes" == row["Supplemental Items Complete"],
+                academic_eligibility=row["Academic Eligibility"],
+                folder_status=row["Folder Status"],
+                date_to_department=convert_time(row["Date Sent to Department"]),
+                department_status=row["Department Processing Status"],
+                special_case_status=row["Special Case Status"],
+                proposed_decision=row["Proposed Decision"],
+                submitted=convert_time(row["Submitted Date"]),
+                marked_complete=convert_time(row["Marked Complete Date"]),
             )
         )
 
@@ -100,10 +101,6 @@ def insert_into_database(df):
     db.session.commit()
     db.session.add_all(new_data)
     db.session.commit()
-
-
-
-
 
 '''
   Parser
@@ -127,10 +124,10 @@ def insert_into_database(df):
 '''
 class Parser:
 
-  def __init__(self, filename):
-    Parser.df = to_csv(filename)
+  def __init__(self, filename, is_csv=False):
+    Parser.df = to_csv(filename, is_csv)
 
-  def parse(self, ParserConst):
+  def parse(self, file, is_csv=False):
     '''Parse the dataset'''
     pass
 
