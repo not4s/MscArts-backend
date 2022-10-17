@@ -10,20 +10,28 @@ applicant_api = api.namespace("api/applicant", description="Applicant API")
 
 applicant_deserializer = ApplicantSchema()
 
+filters = [
+    ("gender", str),
+    ("nationality", str),
+    ("program_code", str),
+    ("erpid", int),
+    ("fee_status", str),
+]
+
 
 @applicant_api.route("/", methods=["GET"])
 class ApplicantApi(Resource):
     def get(self):
-        gender = request.args.get("gender", default=None, type=str)
-        nationality = request.args.get("nationality", default=None, type=str)
-
         query = Applicant.query
-        if gender is not None:
-            query = query.filter(Applicant.gender.ilike(gender))
 
-        if nationality is not None:
-            query = query.filter(Applicant.nationality.ilike(nationality))
+        for (col, col_type) in filters:
+            filter_value = request.args.get(col, default=None, type=col_type)
+
+            if filter_value is not None:
+                if col_type is str:
+                    query = query.filter(Applicant.__dict__[col].ilike(filter_value))
+                elif col_type is int:
+                    query = query.filter(Applicant.__dict__[col] == filter_value)
 
         data = [applicant_deserializer.dump(d) for d in query.all()]
-
         return data, 200
