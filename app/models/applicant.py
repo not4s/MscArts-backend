@@ -5,7 +5,7 @@ from sqlalchemy import ForeignKey
 class Program(db.Model):
     code = db.Column(db.String(10), primary_key=True, unique=True, autoincrement=False)
     name = db.Column(db.String(120))
-    program_type = db.Column(db.String(120))
+    application_type = db.Column(db.String(120))
 
 class Applicant(db.Model):
     erpid = db.Column(db.Integer, primary_key=True)

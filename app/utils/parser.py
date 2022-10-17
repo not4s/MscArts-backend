@@ -3,10 +3,10 @@ import pandas as pd
 from faker import Faker
 from datetime import datetime
 from app.database import db 
-from app.models.applicant import Applicant, ApplicantStatus
+from app.models.applicant import Applicant, ApplicantStatus, Program
 
 # File extension check
-def to_csv(filename):
+def to_csv(file, is_csv):
   col_names = ['Anticipated Entry Term', 'Erpid', 'Prefix', \
                'First Name', 'Last Name', 'Gender', 'Birth Date', \
                'Nationality', 'Email', 'Fee Status', 'Type', \
@@ -17,15 +17,10 @@ def to_csv(filename):
                'Department Processing Status', 'Special Case Status', \
                'Proposed Decision', 'Submitted Date', 'Marked Complete Date']
   
-  return pd.read_excel(filename, names=col_names, header=None)
-
-
-  # if filename.endswith('.csv'):
-  #   return pd.read_csv(filename, names=col_names, header=None)
-  # elif filename.endswith('.xlsx') or filename.endswith('.xls'):
-  #   return pd.read_excel(filename, names=col_names, header=None)
-  # else:
-  #   raise ValueError('File is not of any of the supported formats: Expected .csv, .xlsx or .xls')
+  if (is_csv):
+    return pd.read_csv(file, names=col_names, header=None, keep_default_na=False)
+  else:
+    return pd.read_excel(file, names=col_names, header=None, keep_default_na=False)
 
 # Dummy for fields missing due to privacy concerns
 def create_dummy_for_missing_fields(df):
@@ -45,11 +40,17 @@ def create_dummy_for_missing_fields(df):
 
   return new_df
 
+def convert_time(time_str):
+  if time_str:
+    datetime.strptime(time_str, '%m/%d/%Y').date()
+  else:
+    return None
 
 # inserts values in the given dataframe to the database
 def insert_into_database(df):
   new_data = []
   count = 0
+  program_codes = db.session.query(Program.code).all()
   for x in df.index:
     if count == 0:
       count += 1
@@ -58,19 +59,22 @@ def insert_into_database(df):
     print(df.iloc[x])
     print(type(df.iloc[x]))
 
+    program_code = df.loc[x, 'Programme Code']
+    if program_code not in program_codes:
+      new_data.append(Program(code=program_code, name=df.loc[x, 'Academic Program'], application_type=df.loc[x, 'Type']))
+      program_codes.append(program_code)
+    
     new_data.append(Applicant(erpid=count, prefix=df.loc[x, 'Prefix'], first_name=df.loc[x, 'First Name'], 
     last_name=df.loc[x, 'Last Name'], gender=df.loc[x, 'Gender'],
     nationality=df.loc[x, 'Nationality'], 
     email=df.loc[x, 'Email Address'], fee_status=df.loc[x, 'Fee Status'],
-    program_code=df.loc[x, 'Programme Code']))
+    program_code=program_code))
 
-
-    # [TODO]  Fix all date as some are null
-    # new_data.append(ApplicantStatus(id=count, status=df.loc[x, 'Application Status'], 
-    # supplemental_complete='yes' in df.loc[x, 'Supplemental Items Complete'].lower(), academic_eligibility=df.loc[x, 'Academic Eligibility'],
-    # folder_status=df.loc[x, 'Folder Status'], date_to_department=datetime.strptime(df.loc[x, 'Date Sent to Department'], '%d/%m/%y').date(), department_status=df.loc[x, 'Department Processing Status'], 
-    # special_case_status=df.loc[x, 'Special Case Status'], proposed_decision=df.loc[x, 'Proposed Decision'], 
-    # submitted=datetime.strptime(df.loc[x, 'Submitted Date'], '%d/%m/%y').date(), marked_complete=datetime.strptime(df.loc[x, 'Marked Complete Date'], '%d/%m/%y').date()))
+    new_data.append(ApplicantStatus(id=count, status=df.loc[x, 'Application Status'], 
+    supplemental_complete='yes' in df.loc[x, 'Supplemental Items Complete'].lower(), academic_eligibility=df.loc[x, 'Academic Eligibility'],
+    folder_status=df.loc[x, 'Folder Status'], date_to_department=convert_time(df.loc[x, 'Date Sent to Department']), department_status=df.loc[x, 'Department Processing Status'], 
+    special_case_status=df.loc[x, 'Special Case Status'], proposed_decision=df.loc[x, 'Proposed Decision'], 
+    submitted=convert_time(df.loc[x, 'Submitted Date']), marked_complete=convert_time(df.loc[x, 'Marked Complete Date'])))
 
     count += 1
   
@@ -78,10 +82,10 @@ def insert_into_database(df):
   db.session.commit()
 
 # Parses a file and inserts into database
-def parse(file):
-  df = to_csv(file)
+def parse(file, is_csv=False):
+  df = to_csv(file, is_csv)
   df_with_dummies = create_dummy_for_missing_fields(df) 
   insert_into_database(df_with_dummies)
 
-def parse_by_gender(filename):
-  parse(filename)
+def parse_by_gender(file):
+  parse(file)
