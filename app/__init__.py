@@ -4,6 +4,7 @@ from flask import Flask
 from flask_cors import CORS
 from flask_restx import Api
 from flask_marshmallow import Marshmallow
+from flask_jwt_extended import JWTManager
 
 from .database import db, db_migrator
 
@@ -17,14 +18,16 @@ environment = os.environ.get("ENV", "dev")
 
 
 app = Flask(__name__)
+app.config.from_object(configuration_switch[environment])
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
+jwt = JWTManager(app)
 api = Api()
 ma = Marshmallow()
 
+ldap_service = app.config["LDAP_SERVICE"]
+
 
 def create_app(test_configuration=None):
-
-    app.config.from_object(configuration_switch[environment])
 
     api.init_app(app)
     db.init_app(app)
