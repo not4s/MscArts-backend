@@ -6,7 +6,7 @@ from datetime import timedelta
 class BaseConfig:
     # JWT ======================================================
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=4)
-    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "danasaur")
+    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "mscarts")
 
     # LDAP Service =============================================
     LDAP_SERVICE = fake_ldap_handler.FAKE_LDAP
