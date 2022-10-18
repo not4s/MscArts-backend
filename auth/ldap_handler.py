@@ -1,7 +1,6 @@
 """ 
 taken and modified from edtech/tapp
 """
-
 import itertools
 import re
 from collections import defaultdict
@@ -16,6 +15,20 @@ from app.protocols import Authenticator
 ATTRIBUTE_PATTERN = r"([A-Za-z0-9]+)=([A-Za-z0-9-@]+)"
 USERNAME_FILTER_TEMPLATE = "(&(objectClass=user)(sAMAccountName=%s))"
 BINDING_TEMPLATE = "%s@IC.AC.UK"
+
+# Relevant IC LDAP attributes
+TITLE = "extensionAttribute6"
+USERNAME = "name"
+NAME = "givenName"
+SURNAME = "sn"
+DN = "distinguishedName"
+MEMBER_OF = "memberOf"
+MEMBERSHIPS = "memberships"
+
+DOC_CN_MEMBERSHIPS = ("doc-all-students", "doc-staff-group", "doc-ext-group")
+
+# List of attributes to be parsed into dictionaries
+ATTRIBUTES_TO_SERIALISE = [DN, MEMBER_OF, MEMBERSHIPS]
 
 RawLdapAttributes = Dict[str, List[bytes]]
 SerialisedAttributeValue = Dict[str, Set[str]]
@@ -98,6 +111,8 @@ class DocLdapAuthenticator(Authenticator):
         except ldap.INVALID_CREDENTIALS:
             return None
 
+
+LDAP = DocLdapAuthenticator()
 
 ###################################################################
 # Helpers                                                         #

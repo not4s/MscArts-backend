@@ -1,38 +1,25 @@
-from admissions.utils import ldap
+from app import api, ldap_service
 from jwt import DecodeError, ExpiredSignatureError, InvalidSignatureError
-from flask_jwt_extended.exceptions import InvalidHeaderError, JWTDecodeError, NoAuthorizationError, RevokedTokenError
-from admissions.utils.credentials import Roles, getRoles
+from flask_jwt_extended.exceptions import (
+    InvalidHeaderError,
+    JWTDecodeError,
+    NoAuthorizationError,
+    RevokedTokenError,
+)
 from functools import wraps
 
 from flask import request, abort
 from flask.json import jsonify
 from flask_restx import Resource
 from flask_jwt_extended import (
+    get_jwt,
     jwt_required,
     verify_jwt_in_request,
-    get_jwt_claims,
     create_access_token,
 )
 
-from werkzeug.security import check_password_hash
-
-from admissions import api, jwt, db
-from admissions.models.session import Credentials
 
 user_api = api.namespace("api/user", description="Login and role operations")
-
-
-# Defines data stored per access token (called on create_access_token)
-@jwt.user_claims_loader
-def add_claims_to_access_token(user):
-    return user
-
-
-# Defines identity of user as the user's email (called on create_access_token)
-@jwt.user_identity_loader
-def user_identity_lookup(user):
-    return user["username"]
-
 
 # Error handlers
 @user_api.errorhandler(DecodeError)
@@ -70,51 +57,12 @@ def handle_no_jwt_exception(error):
     return {"message": "The header is invalid."}, 401
 
 
-def applicant_required(fn):
+def admin_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
         verify_jwt_in_request()
-        claims = get_jwt_claims()
-        if Roles.applicant not in claims["roles"]:
-            return {"message": "Applicants Only!"}, 403
-        else:
-            return fn(*args, **kwargs)
-
-    return wrapper
-
-
-def question_setter_required(fn):
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        verify_jwt_in_request()
-        claims = get_jwt_claims()
-        if Roles.question_setter not in claims["roles"]:
-            return {"message": "Question Setters Only!"}, 403
-        else:
-            return fn(*args, **kwargs)
-
-    return wrapper
-
-
-def quiz_admin_required(fn):
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        verify_jwt_in_request()
-        claims = get_jwt_claims()
-        if Roles.test_admin not in claims["roles"]:
-            return {"message": "Test Admins Only!"}, 403
-        else:
-            return fn(*args, **kwargs)
-
-    return wrapper
-
-
-def sys_admin_required(fn):
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        verify_jwt_in_request()
-        claims = get_jwt_claims()
-        if Roles.system_admin not in claims["roles"]:
+        claims = get_jwt()
+        if "admin" != claims["role"]:
             return {"message": "System Admins Only!"}, 403
         else:
             return fn(*args, **kwargs)
@@ -131,28 +79,26 @@ class UserLogin(Resource):
         user = request.json
         username = user.get("username", None).strip()
         password = user.get("password", None)
-        credentials = Credentials.query.get_or_404(username)
 
-        if credentials.is_imperial:
-            user_ldap_attributes = ldap.login(username, password)
-            valid = user_ldap_attributes is not None
-        else:
-            valid = check_password_hash(credentials.password, password)
+        user_ldap_attributes = ldap_service.authenticate(username, password)
+        valid = user_ldap_attributes is not None
 
         response = {}
         if valid:
             response["success"] = True
+            identity = dict(username=username, is_imperial=True)
 
-            roles = getRoles(db, username)
-            response["roles"] = roles
+            # [TODO] Role Control
+            role = {"role": "student"}
 
-            identity = dict(username=username, roles=roles, is_imperial=credentials.is_imperial)
-            response["accessToken"] = create_access_token(identity=identity)
+            response["accessToken"] = create_access_token(
+                identity=identity, additional_claims=role
+            )
             response = jsonify(response)
             response.status_code = 200
         else:
             response["success"] = False
-            response = jsonify(response)            
+            response = jsonify(response)
             response.status_code = 403
 
         return response
@@ -160,8 +106,17 @@ class UserLogin(Resource):
 
 @user_api.route("/roles", methods=["GET"])
 class UserRoles(Resource):
-    @jwt_required
+    @jwt_required()
     def get(self):
-        claims = get_jwt_claims()
-        roles = claims["roles"]
+        claims = get_jwt()
+        roles = claims["role"]
+        # roles = {"message": "all good"}
         return roles, 200
+
+
+@user_api.route("/admin", methods=["GET"])
+class AdminAPI(Resource):
+    @jwt_required()
+    @admin_required
+    def get(self):
+        return {"message": "Hello World"}, 200
