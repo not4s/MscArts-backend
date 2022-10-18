@@ -34,20 +34,24 @@ def convert_time(time_str):
     else:
         return None
 
+def insert_erpid(df):
+  df['Erpid'] = range(1, df.shape[0] + 1)
+
 # inserts values in the given dataframe to the database
 def insert_into_database(df):
+    df.dropna(how='all', inplace=True)
+    df.reset_index(drop=True, inplace=True)
+    insert_erpid(df)
+    
     fake = Faker()
     Faker.seed(137920)
     new_data = []
     new_program_code = []
-    count = 0
 
-    df = df.dropna(how='all')
     program_codes = list(map(lambda x: x.code, Program.query.all()))
     for index, row in df.iterrows():
-        if count == 0:
-            count += 1
-            continue
+        if index == 0:
+          continue
         
         f_name = row["First Name"] if row["First Name"] != "" else fake.first_name()
         l_name = row["Last Name"] if row["Last Name"] != "" else fake.last_name()
@@ -67,7 +71,7 @@ def insert_into_database(df):
 
         new_data.append(
             Applicant(
-                erpid=count,
+                erpid=row["Erpid"],
                 prefix=row["Prefix"],
                 first_name=f_name,
                 last_name=l_name,
@@ -81,7 +85,7 @@ def insert_into_database(df):
 
         new_data.append(
             ApplicantStatus(
-                id=count,
+                id=row["Erpid"],
                 status=row["Application Status"],
                 supplemental_complete="Yes" == row["Supplemental Items Complete"],
                 academic_eligibility=row["Academic Eligibility"],
@@ -94,8 +98,6 @@ def insert_into_database(df):
                 marked_complete=convert_time(row["Marked Complete Date"]),
             )
         )
-
-        count += 1
 
     db.session.add_all(new_program_code)
     db.session.commit()
