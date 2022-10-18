@@ -9,6 +9,7 @@ class BaseConfig:
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "mscarts")
 
     # LDAP Service =============================================
+    LDAP_TYPE = "FAKE LDAP"
     LDAP_SERVICE = fake_ldap_handler.FAKE_LDAP
 
     # Database ===================================================
