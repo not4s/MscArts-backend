@@ -22,7 +22,10 @@ class DevConfig(BaseConfig):
 
 class StagingConfig(BaseConfig):
     # LDAP Service =============================================
-    LDAP_SERVICE = ldap_handler.LDAP
+    LDAP_TYPE = os.environ.get("DUMMY_LDAP", None)
+    LDAP_SERVICE = (
+        ldap_handler.LDAP if LDAP_TYPE is None else fake_ldap_handler.FAKE_LDAP
+    )
 
     # Database ===================================================
     STAGING_DB_HOST = os.environ.get("STAGING_DB_HOST", None)

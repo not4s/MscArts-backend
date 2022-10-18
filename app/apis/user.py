@@ -87,7 +87,10 @@ class UserLogin(Resource):
         if valid:
             response["success"] = True
             identity = dict(username=username, is_imperial=True)
+
+            # [TODO] Role Control
             role = {"role": "student"}
+
             response["accessToken"] = create_access_token(
                 identity=identity, additional_claims=role
             )
