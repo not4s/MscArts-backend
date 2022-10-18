@@ -22,7 +22,7 @@ from flask_jwt_extended import (
 from app.models.user_access import UserAccess
 from app.utils.user_access import getAccessLevel, addUser
 
-user_api = api.namespace("api/user", description="Login and role operations")
+user_api = api.namespace("api/user", description="Login and access operations")
 
 # Error handlers
 @user_api.errorhandler(DecodeError)
@@ -68,7 +68,7 @@ def admin_required(fn):
         if claims["role"] >= 3:
             return fn(*args, **kwargs)
         else:
-            return {"message": "System Admins Only!"}, 403
+            return {"message": "No Admin Access!"}, 403
 
     return wrapper
 
@@ -156,10 +156,8 @@ class UserRoles(Resource):
         roles = claims["role"]
         return roles, 200
 
-    @jwt_required()
     @admin_required
     def delete(self):
-
         username = request.json.get("username", None)
 
         if username is None:
@@ -174,7 +172,6 @@ class UserRoles(Resource):
         db.session.commit()
         return {"message": "Successfully deleted user"}, 200
 
-    @jwt_required()
     @admin_required
     def put(self):
         username = request.json.get("username", None)
