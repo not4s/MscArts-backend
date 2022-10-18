@@ -110,7 +110,7 @@ class UserLogin(Resource):
         password = user.get("password", None)
 
         if username is None or password is None:
-            return {"message": "Missing username or password"}, 400
+            return {"message": "Missing username or password", "success": False}, 400
 
         user_ldap_attributes = ldap_service.authenticate(username, password)
         valid = user_ldap_attributes is not None
@@ -124,10 +124,16 @@ class UserLogin(Resource):
 
             if role is None:
                 addUser(db, username)
-                return {"message": "Request permission from a system admin"}, 401
+                return {
+                    "message": "Request permission from a system admin",
+                    "success": False,
+                }, 401
 
             if role[0].access == 0:
-                return {"message": "Request permission from a system admin"}, 401
+                return {
+                    "message": "Request permission from a system admin",
+                    "success": False,
+                }, 401
 
             response["accessToken"] = create_access_token(
                 identity=identity, additional_claims={"role": role[0].access}
