@@ -62,6 +62,7 @@ def applicant_data(row):
 
 # inserts values in the given dataframe to the database
 def insert_into_database(df):
+
     df.dropna(how='all', inplace=True)
     df.reset_index(drop=True, inplace=True)
     df["First Name"] = df["First Name"].fillna('')
@@ -78,9 +79,16 @@ def insert_into_database(df):
     for index, row in df.iterrows():
         if index == 0:
           continue
-        row["First Name"] = row["First Name"] if row["First Name"] else fake.first_name()
-        row["Last Name"] = row["Last Name"] if row["Last Name"] else fake.last_name()
-        row["Email"]  = row["Email"] if row["Email"] else f'{row["First Name"]}.{row["Last Name"]}@{fake.domain_name()}'
+
+        duplicate_applicant = Applicant.query.filter_by(erpid = row['Erpid']).delete()
+        duplicate_applicant_status = ApplicantStatus.query.filter_by(id = row['Erpid']).delete()
+        duplicate_program = Program.query.filter_by(code = row['Programme Code']).delete()
+        db.session.commit()
+
+        
+        f_name = row["First Name"] if row["First Name"] != "" else fake.first_name()
+        l_name = row["Last Name"] if row["Last Name"] != "" else fake.last_name()
+        email = row["Email"] if row["Email"] != "" else f'{f_name}.{l_name}@{fake.domain_name()}'
         # b_date = fake.date_between_dates(date_start=datetime(1980,1,1), date_end=datetime(2005,12,31)).year
 
         program_code = row["Programme Code"]
