@@ -21,9 +21,9 @@ def to_csv(filename, is_csv):
                'Proposed Decision', 'Submitted Date', 'Marked Complete Date']
 
   if (is_csv):
-    return pd.read_csv(filename, names=col_names, header=None, keep_default_na=False)
+    return pd.read_csv(filename, names=col_names, header=None)
   else:
-    return pd.read_excel(filename, names=col_names, header=None, keep_default_na=False)
+    return pd.read_excel(filename, names=col_names, header=None)
 
 def convert_time(time_str):
     if type(time_str) is datetime:
@@ -67,6 +67,9 @@ def applicant_data(row):
 def insert_into_database(df):
     df.dropna(how='all', inplace=True)
     df.reset_index(drop=True, inplace=True)
+    df["First Name"] = df["First Name"].fillna('')
+    df["Last Name"] = df["Last Name"].fillna('')
+    df["Email"] = df["Email"].fillna('')
     insert_erpid(df)
     
     fake = Faker()
@@ -78,7 +81,6 @@ def insert_into_database(df):
     for index, row in df.iterrows():
         if index == 0:
           continue
-        
         row["First Name"] = row["First Name"] if row["First Name"] else fake.first_name()
         row["Last Name"] = row["Last Name"] if row["Last Name"] else fake.last_name()
         row["Email"]  = row["Email"] if row["Email"] else f'{row["First Name"]}.{row["Last Name"]}@{fake.domain_name()}'
