@@ -4,6 +4,7 @@ from app.models.applicant import Applicant
 from app.schemas.applicant import ApplicantSchema
 from flask import request
 from flask_restx import Resource
+import pandas as pd
 
 
 applicant_api = api.namespace("api/applicant", description="Applicant API")
@@ -34,4 +35,17 @@ class ApplicantApi(Resource):
                     query = query.filter(Applicant.__dict__[col] == filter_value)
 
         data = [applicant_deserializer.dump(d) for d in query.all()]
+
+        if len(data) == 0:
+            return data, 200
+
+        count = request.args.get("count", default=None, type=str)
+        if count:
+            df = pd.DataFrame(data)
+            counted = df[count].value_counts()
+            reformatted = []
+            for key, value in counted.items():
+                reformatted.append({count: key, "count": int(value)})
+
+            return reformatted, 200
         return data, 200
