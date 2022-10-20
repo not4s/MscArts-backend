@@ -37,6 +37,32 @@ def convert_time(time_str):
 def insert_erpid(df):
   df['Erpid'] = range(1, df.shape[0] + 1)
 
+def applicant_data(row):
+  return (Applicant(
+                erpid=row["Erpid"],
+                prefix=row["Prefix"],
+                first_name=row["First Name"],
+                last_name=row["Last Name"],
+                gender=row["Gender"],
+                nationality=row["Nationality"],
+                email=row["Email"],
+                fee_status=row["Fee Status"],
+                program_code=row["Programme Code"],
+            ),
+            ApplicantStatus(
+                id=row["Erpid"],
+                status=row["Application Status"],
+                supplemental_complete="Yes" == row["Supplemental Items Complete"],
+                academic_eligibility=row["Academic Eligibility"],
+                folder_status=row["Folder Status"],
+                date_to_department=convert_time(row["Date Sent to Department"]),
+                department_status=row["Department Processing Status"],
+                special_case_status=row["Special Case Status"],
+                proposed_decision=row["Proposed Decision"],
+                submitted=convert_time(row["Submitted Date"]),
+                marked_complete=convert_time(row["Marked Complete Date"]),
+            ))
+
 # inserts values in the given dataframe to the database
 def insert_into_database(df):
     df.dropna(how='all', inplace=True)
@@ -53,9 +79,9 @@ def insert_into_database(df):
         if index == 0:
           continue
         
-        f_name = row["First Name"] if row["First Name"] != "" else fake.first_name()
-        l_name = row["Last Name"] if row["Last Name"] != "" else fake.last_name()
-        email = row["Email"] if row["Email"] != "" else f'{f_name}.{l_name}@{fake.domain_name()}'
+        row["First Name"] = row["First Name"] if row["First Name"] else fake.first_name()
+        row["Last Name"] = row["Last Name"] if row["Last Name"] else fake.last_name()
+        row["Email"]  = row["Email"] if row["Email"] else f'{row["First Name"]}.{row["Last Name"]}@{fake.domain_name()}'
         # b_date = fake.date_between_dates(date_start=datetime(1980,1,1), date_end=datetime(2005,12,31)).year
 
         program_code = row["Programme Code"]
@@ -68,36 +94,9 @@ def insert_into_database(df):
                 )
             )
             program_codes.append(program_code)
-
-        new_data.append(
-            Applicant(
-                erpid=row["Erpid"],
-                prefix=row["Prefix"],
-                first_name=f_name,
-                last_name=l_name,
-                gender=row["Gender"],
-                nationality=row["Nationality"],
-                email=email,
-                fee_status=row["Fee Status"],
-                program_code=program_code,
-            )
-        )
-
-        new_data.append(
-            ApplicantStatus(
-                id=row["Erpid"],
-                status=row["Application Status"],
-                supplemental_complete="Yes" == row["Supplemental Items Complete"],
-                academic_eligibility=row["Academic Eligibility"],
-                folder_status=row["Folder Status"],
-                date_to_department=convert_time(row["Date Sent to Department"]),
-                department_status=row["Department Processing Status"],
-                special_case_status=row["Special Case Status"],
-                proposed_decision=row["Proposed Decision"],
-                submitted=convert_time(row["Submitted Date"]),
-                marked_complete=convert_time(row["Marked Complete Date"]),
-            )
-        )
+        applicant, applicant_status = applicant_data(row)
+        new_data.append(applicant)
+        new_data.append(applicant_status)
 
     db.session.add_all(new_program_code)
     db.session.commit()
