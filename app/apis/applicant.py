@@ -40,12 +40,15 @@ class ApplicantApi(Resource):
             return data, 200
 
         count = request.args.get("count", default=None, type=str)
+        combined = 0
         if count:
             df = pd.DataFrame(data)
             counted = df[count].value_counts()
             reformatted = []
             for key, value in counted.items():
                 reformatted.append({count: key, "count": int(value)})
+                combined += int(value)
+            reformatted.append({count: "Combined", "count": combined})
 
             return reformatted, 200
         return data, 200
