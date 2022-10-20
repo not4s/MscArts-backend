@@ -14,7 +14,7 @@ class Applicant(db.Model):
     prefix = db.Column(db.String(10))
     first_name = db.Column(db.String(80))
     last_name = db.Column(db.String(80))
-    gender = db.Column(db.String(10))
+    gender = db.Column(db.String)
     nationality = db.Column(db.String(100))
     email = db.Column(db.String(120))
     fee_status = db.Column(db.String(20))

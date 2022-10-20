@@ -16,6 +16,8 @@ configuration_switch = {
 
 environment = os.environ.get("ENV", "dev")
 
+print(f"Envrionment is {environment}")
+
 
 app = Flask(__name__)
 app.config.from_object(configuration_switch[environment])

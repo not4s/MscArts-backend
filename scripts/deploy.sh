@@ -10,6 +10,11 @@ then
     echo "Gunicorn executed with code $EXIT_CODE." | tee gunicorn-log.txt -a
 else
     echo 'Gunicorn starting...' | tee gunicorn-log.txt -a
+    ENV=$ENV \
+    STAGING_DB_HOST=$STAGING_DB_HOST \
+    STAGING_DB=$STAGING_DB \
+    STAGING_DB_USER=$STAGING_DB_USER \
+    STAGING_DB_PASSWORD=$STAGING_DB_PASSWORD \
     gunicorn wsgi \
         --bind 0.0.0.0:5000 \
         --pid $HOME/gunicorn.pid \
