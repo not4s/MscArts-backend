@@ -20,6 +20,7 @@ environment = os.environ.get("ENV", "dev")
 app = Flask(__name__)
 app.config.from_object(configuration_switch[environment])
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
+app.config["CORS_HEADERS"] = "Content-Type"
 jwt = JWTManager(app)
 api = Api()
 ma = Marshmallow()
