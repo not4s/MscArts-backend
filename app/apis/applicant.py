@@ -47,10 +47,10 @@ class ApplicantApi(Resource):
             counted = df[count].value_counts()
             reformatted = []
             for key, value in counted.items():
-                reformatted.append(
-                    {count: "Combined", "count": int(value), "type": key}
-                )
-                reformatted.append({count: key, "count": int(value), "type": key})
-
+                if (key.strip() != ""):
+                    reformatted.append(
+                        {count: "Combined", "count": int(value), "type": key}
+                    )
+                    reformatted.append({count: key, "count": int(value), "type": key})
             return reformatted, 200
         return data, 200
