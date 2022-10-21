@@ -2,6 +2,7 @@ from app import api
 from app.database import db
 from app.models.applicant import Applicant
 from app.schemas.applicant import ApplicantSchema
+from app.apis.user import read_access_required
 from flask import request
 from flask_restx import Resource
 import pandas as pd
@@ -22,6 +23,7 @@ filters = [
 
 @applicant_api.route("/", methods=["GET"])
 class ApplicantApi(Resource):
+    @read_access_required
     def get(self):
         query = Applicant.query
 
@@ -45,7 +47,9 @@ class ApplicantApi(Resource):
             counted = df[count].value_counts()
             reformatted = []
             for key, value in counted.items():
-                reformatted.append({count: "Combined", "count": int(value), "type": key})
+                reformatted.append(
+                    {count: "Combined", "count": int(value), "type": key}
+                )
                 reformatted.append({count: key, "count": int(value), "type": key})
 
             return reformatted, 200

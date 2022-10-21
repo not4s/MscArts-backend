@@ -5,8 +5,8 @@ from app.database import db
 from flask import request, abort
 from flask_restx import Resource
 import app.utils.parser as Parser
+from app.apis.user import write_access_required
 
-from werkzeug.utils import secure_filename
 
 upload_api = api.namespace("api/upload", description="Test API")
 
@@ -19,6 +19,7 @@ def validate_file(file):
 
 @upload_api.route("/", methods=["POST"])
 class UploadApi(Resource):
+    @write_access_required
     def post(self):
         if "file" not in request.files:
             abort(406, description="No Files Found")
@@ -31,10 +32,8 @@ class UploadApi(Resource):
             abort(406, description="no file found")
 
         if file and validate_file(file):
-            filename = secure_filename(file.filename)
-            df = Parser.to_csv(file, is_csv=file.filename.endswith('.csv'))
+            df = Parser.to_csv(file, is_csv=file.filename.endswith(".csv"))
             Parser.insert_into_database(df)
-            # file.save(os.path.join('/apis', filename))
 
         data = {"message": "file uploaded"}
         return data, 200
