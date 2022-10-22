@@ -4,7 +4,7 @@ from enum import Enum
 from datetime import datetime
 from app.database import db 
 from faker import Faker
-from app.models.applicant import Applicant, ApplicantStatus, Program
+from app.models.applicant import Applicant, Program
 
 
 # File extension check
@@ -38,7 +38,7 @@ def insert_erpid(df):
   df['Erpid'] = range(1, df.shape[0] + 1)
 
 def applicant_data(row):
-  return (Applicant(
+  return Applicant(
                 erpid=row["Erpid"],
                 prefix=row["Prefix"],
                 first_name=row["First Name"],
@@ -48,10 +48,7 @@ def applicant_data(row):
                 email=row["Email"],
                 fee_status=row["Fee Status"],
                 program_code=row["Programme Code"],
-            ),
-            ApplicantStatus(
-                id=row["Erpid"],
-                status=row["Application Status"],
+                application_status=row["Application Status"],
                 supplemental_complete="Yes" == row["Supplemental Items Complete"],
                 academic_eligibility=row["Academic Eligibility"],
                 folder_status=row["Folder Status"],
@@ -61,7 +58,7 @@ def applicant_data(row):
                 proposed_decision=row["Proposed Decision"],
                 submitted=convert_time(row["Submitted Date"]),
                 marked_complete=convert_time(row["Marked Complete Date"]),
-            ))
+            )
 
 # inserts values in the given dataframe to the database
 def insert_into_database(df):
@@ -96,9 +93,8 @@ def insert_into_database(df):
                 )
             )
             program_codes.append(program_code)
-        applicant, applicant_status = applicant_data(row)
+        applicant = applicant_data(row)
         new_data.append(applicant)
-        new_data.append(applicant_status)
 
     db.session.add_all(new_program_code)
     db.session.commit()

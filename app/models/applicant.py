@@ -19,11 +19,7 @@ class Applicant(db.Model):
     email = db.Column(db.String(120))
     fee_status = db.Column(db.String(20))
     program_code = db.Column(db.String(10), ForeignKey("program.code"))
-
-
-class ApplicantStatus(db.Model):
-    id = db.Column(db.Integer, ForeignKey("applicant.erpid"), primary_key=True)
-    status = db.Column(db.String(80))
+    application_status = db.Column(db.String(80))
     supplemental_complete = db.Column(db.Boolean)
     academic_eligibility = db.Column(db.String(80))
     folder_status = db.Column(db.String(80))
