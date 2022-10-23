@@ -29,3 +29,8 @@ class Applicant(db.Model):
     proposed_decision = db.Column(db.String(30))
     submitted = db.Column(db.Date)
     marked_complete = db.Column(db.Date)
+
+class Target(db.Model):
+    program_code = db.Column(db.String(10), ForeignKey('program.code'), primary_key=True, autoincrement=False)
+    year = db.Column(db.String(10), primary_key=True, autoincrement=False)
+    target = db.Column(db.Integer)

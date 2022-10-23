@@ -1,7 +1,7 @@
 from app import api
 from app.database import db
-from app.models.applicant import Applicant
-from app.schemas.applicant import ApplicantSchema
+from app.models.applicant import Applicant, Target
+from app.schemas.applicant import ApplicantSchema, TargetSchema
 from app.apis.user import read_access_required
 from flask import request
 from flask_restx import Resource
@@ -12,6 +12,8 @@ applicant_api = api.namespace("api/applicant", description="Applicant API")
 
 applicant_deserializer = ApplicantSchema()
 
+target_deserializer = TargetSchema()
+
 filters = [
     ("gender", str),
     ("nationality", str),
@@ -20,6 +22,33 @@ filters = [
     ("fee_status", str),
 ]
 
+
+@applicant_api.route("/target", methods=["GET", "POST"])
+class ApplicantApi(Resource):
+    def get(self):
+        course = request.args.get("course", default=None, type=str)
+        year = request.args.get("year", default=None, type=str)
+
+        data = target_deserializer.dump(db.session.query(Target).filter_by(program_code=course, year=year).one())
+
+        # TODO: track the progress
+        data = {**data, "progress" : 87.7}
+        print(course)
+        print(year)
+        print(data)
+
+        return data, 200
+
+    def post(self):
+        course=request.args.get("course", default=None, type=str)
+        year = request.args.get("year", default=None, type=str)
+        target = request.args.get("target", default=None, type=int)
+
+        db.session.add(Target(program_code=course, year=year, target=target))
+        db.session.commit()
+
+        data = {"message": "target uploaded"}
+        return data, 200
 
 @applicant_api.route("/", methods=["GET"])
 class ApplicantApi(Resource):
