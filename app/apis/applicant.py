@@ -6,7 +6,7 @@ from app.apis.user import read_access_required
 from flask import request
 from flask_restx import Resource
 import pandas as pd
-
+import random
 
 applicant_api = api.namespace("api/applicant", description="Applicant API")
 
@@ -28,15 +28,18 @@ class ApplicantApi(Resource):
     def get(self):
         course = request.args.get("course", default=None, type=str)
         year = request.args.get("year", default=None, type=str)
+        query = db.session.query(Target)
+        if course is not None:
+            query = query.filter_by(program_code=course)
+        if year is not None:
+            query = query.filter_by(year=year)
 
-        data = target_deserializer.dump(db.session.query(Target).filter_by(program_code=course, year=year).one())
+        data = [target_deserializer.dump(d) for d in query.all()]
 
         # TODO: track the progress
-        data = {**data, "progress" : 87.7}
-        print(course)
-        print(year)
-        print(data)
-
+        for i, target in enumerate(data):
+            data[i] = {**target, "progress" : random.randint(1, 100)}
+        
         return data, 200
 
     def post(self):
