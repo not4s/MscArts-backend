@@ -1,16 +1,18 @@
 from app import api
 from app.database import db
-from app.models.applicant import Applicant
-from app.schemas.applicant import ApplicantSchema
+from app.models.applicant import Applicant, Target
+from app.schemas.applicant import ApplicantSchema, TargetSchema
 from app.apis.user import read_access_required
 from flask import request
 from flask_restx import Resource
 import pandas as pd
-
+import random
 
 applicant_api = api.namespace("api/applicant", description="Applicant API")
 
 applicant_deserializer = ApplicantSchema()
+
+target_deserializer = TargetSchema()
 
 filters = [
     ("gender", str),
@@ -20,6 +22,36 @@ filters = [
     ("fee_status", str),
 ]
 
+
+@applicant_api.route("/target", methods=["GET", "POST"])
+class ApplicantApi(Resource):
+    def get(self):
+        course = request.args.get("course", default=None, type=str)
+        year = request.args.get("year", default=None, type=str)
+        query = db.session.query(Target)
+        if course is not None:
+            query = query.filter_by(program_code=course)
+        if year is not None:
+            query = query.filter_by(year=year)
+
+        data = [target_deserializer.dump(d) for d in query.all()]
+
+        # TODO: track the progress
+        for i, target in enumerate(data):
+            data[i] = {**target, "progress" : random.randint(1, 100)}
+        
+        return data, 200
+
+    def post(self):
+        course=request.args.get("course", default=None, type=str)
+        year = request.args.get("year", default=None, type=str)
+        target = request.args.get("target", default=None, type=int)
+
+        db.session.add(Target(program_code=course, year=year, target=target))
+        db.session.commit()
+
+        data = {"message": "target uploaded"}
+        return data, 200
 
 @applicant_api.route("/", methods=["GET"])
 class ApplicantApi(Resource):
