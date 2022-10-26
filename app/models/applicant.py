@@ -2,13 +2,15 @@ import enum
 from app.database import db
 from sqlalchemy import ForeignKey
 
+class ProgramMapping(db.Model):
+    program_type = db.Column(db.String(10), primary_key=True, autoincrement=False) 
 
 class Program(db.Model):
     code = db.Column(db.String(10), primary_key=True, unique=True, autoincrement=False)
     name = db.Column(db.String(120))
     academic_level = db.Column(db.String(120))
     active = db.Column(db.Boolean, default=True)
-
+    program_type = db.Column(db.String(10), ForeignKey("program_mapping.program_type"))
 
 class Applicant(db.Model):
     erpid = db.Column(db.Integer, primary_key=True)
@@ -32,6 +34,6 @@ class Applicant(db.Model):
     marked_complete = db.Column(db.Date)
 
 class Target(db.Model):
-    program_code = db.Column(db.String(10), ForeignKey('program.code'), primary_key=True, autoincrement=False)
+    program_type = db.Column(db.String(10), ForeignKey('program_mapping.program_type'), primary_key=True, autoincrement=False)
     year = db.Column(db.String(10), primary_key=True, autoincrement=False)
     target = db.Column(db.Integer)

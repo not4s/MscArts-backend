@@ -1,10 +1,14 @@
 from app import ma
-from app.models.applicant import Program, Applicant, Target
+from app.models.applicant import Program, Applicant, Target, ProgramMapping
 
 class ProgramSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Program
+        include_fk = True
 
+class ProgramMappingSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = ProgramMapping
 
 class ApplicantSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
