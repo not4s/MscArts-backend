@@ -53,6 +53,18 @@ class ApplicantApi(Resource):
         data = {"message": "target uploaded"}
         return data, 200
 
+@applicant_api.route("/attribute", methods=["GET"])
+class ApplicantAttributeApi(Resource):
+    def get(self):
+
+        data = {}
+        for (col, col_type) in filters:
+            data[col] = []
+            for value in db.session.query(Applicant.__dict__[col]).distinct():
+                data[col].append(applicant_deserializer.dump(value)[col])
+
+        return data, 200
+
 @applicant_api.route("/", methods=["GET"])
 class ApplicantApi(Resource):
     @read_access_required
