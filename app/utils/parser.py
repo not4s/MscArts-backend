@@ -6,28 +6,31 @@ from app.database import db
 from faker import Faker
 from app.models.applicant import Applicant, Program
 
+col_names = ['Version', 'Anticipated Entry Term', 'Erpid', 'Prefix', \
+              'First Name', 'Last Name', 'Gender', 'Birth Date', \
+              'Nationality', 'Email', 'Fee Status', 'Type', \
+              'Academic College', 'IC Department', 'Programme Code', \
+              'Academic Program', 'Academic Level', 'Application Status', \
+              'Supplemental Items Complete', 'Academic Eligibility', \
+              'Folder Status', 'Date Sent to Department', \
+              'Department Processing Status', 'Special Case Status', \
+              'Proposed Decision', 'Submitted Date', 'Marked Complete Date']
+
 
 # File extension check
 def csv_to_df(filename, is_csv):
-
-  col_names = ['Version', 'Anticipated Entry Term', 'Erpid', 'Prefix', \
-               'First Name', 'Last Name', 'Gender', 'Birth Date', \
-               'Nationality', 'Email', 'Fee Status', 'Type', \
-               'Academic College', 'IC Department', 'Programme Code', \
-               'Academic Program', 'Academic Level', 'Application Status', \
-               'Supplemental Items Complete', 'Academic Eligibility', \
-               'Folder Status', 'Date Sent to Department', \
-               'Department Processing Status', 'Special Case Status', \
-               'Proposed Decision', 'Submitted Date', 'Marked Complete Date']
 
   if (is_csv):
     return pd.read_csv(filename, names=col_names, header=None)
   else:
     return pd.read_excel(filename, names=col_names, header=None, keep_default_na=False)
-    
-# TODO
-def db_to_df():
+
+def generate_df_from_sql(query):
   pass
+
+def generate_df_from_db():
+  
+
 
 def convert_time(time_str):
     if type(time_str) is datetime:
@@ -41,9 +44,6 @@ def convert_time(time_str):
 def insert_erpid(df):
   df['Erpid'] = range(1, df.shape[0] + 1)
 
-def fetch_latest_version():
-  version_parser = VersionParser()
-  return version_parser.getLatestVersion
 
 # inserts values in the given dataframe to the database
 def insert_into_database(df):
@@ -61,8 +61,13 @@ def insert_into_database(df):
     new_program_code = []
 
     program_codes = list(map(lambda x: x.code, Program.query.all()))
+    database_df = Parser.df
+
     for index, row in df.iterrows():
         if index == 0:
+          continue
+
+        if df.iloc[index] in database_df:
           continue
 
         f_name = row["First Name"] if row["First Name"] != "" else fake.first_name()
@@ -81,9 +86,18 @@ def insert_into_database(df):
             )
             program_codes.append(program_code)
 
+        # Fetch the latest version saved in db of the given erpid
+        version_parser = VersionParser()
+        version = version_parser.getLatestVersion(row["Erpid"])
+
+        if not version: # If no prior version is in db
+          version = 1
+        else:
+          version += 1
+
         new_data.append(
             Applicant(
-                version=row["Version"],
+                version,
                 anticipated_entry_term=row["Anticipated Entry Term"],
                 erpid=row["Erpid"],
                 prefix=row["Prefix"],
@@ -118,8 +132,6 @@ def insert_into_database(df):
     db.session.add_all(new_data)
     db.session.commit()
 
-    return fetch_latest_version()
-
 
 '''
   Parser
@@ -145,7 +157,7 @@ class Parser:
 
   def __init__(self):
     
-    self.df = db_to_df()
+    self.df = generate_df_from_db()
 
   def parse(self, context):
     '''Parse the dataset'''
@@ -157,28 +169,24 @@ class Parser:
 
 class VersionParser(Parser):
   
-  version_list = []
+  version_map = {}
   parsed_data = {}
-  latest_version = 1
 
   def __init__(self):
     Parser.__init__(self)
-    for version in self.df['Version']:
-      if version not in VersionParser.version_list:
-        VersionParser.term_list.append(version)
-      VersionParser.parsed_data[version] \
-        = self.df[self.df['Version'] == version]
+    for erpid in self.df['Erpid']:
+      if erpid not in VersionParser.version_map:
+        VersionParser.version_map[erpid] = 1
+      else:
+        VersionParser.version_map[erpid] \
+          = self.df[self.df["Erpid"] == erpid]["Version"]
     self.latest_version = max(self.version_list)
 
-  def getLatestVersion(self):
-    return self.parsed_data[self.latest_version]
-  
-  def rollback(self):
-    self.latest_version -= 1
-    return self.getLatestVersion()
+  def getLatestVersion(self, erpid):
+    return self.version_map[erpid]
 
   def parse(self, version):
-    return self.parsed_data[version]
+    pass
 
   
 class AnticipatedEntryTermParser(Parser):
@@ -202,9 +210,6 @@ class AnticipatedEntryTermParser(Parser):
     except:
       print(f'No applicants for year {year}!')
 
-    
-  
-  
 
 class GenderParser(Parser):
     
