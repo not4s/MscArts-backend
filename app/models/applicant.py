@@ -13,6 +13,8 @@ class Program(db.Model):
     program_type = db.Column(db.String(10), ForeignKey("program_mapping.program_type"))
 
 class Applicant(db.Model):
+    version = db.Column(db.Integer, primary_key=True)
+    anticipated_entry_term = db.Column(db.String(30))
     erpid = db.Column(db.Integer, primary_key=True)
     prefix = db.Column(db.String(10))
     first_name = db.Column(db.String(80))
