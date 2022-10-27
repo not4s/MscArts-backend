@@ -2,8 +2,10 @@ import enum
 from app.database import db
 from sqlalchemy import ForeignKey
 
+
 class ProgramMapping(db.Model):
-    program_type = db.Column(db.String(10), primary_key=True, autoincrement=False) 
+    program_type = db.Column(db.String(10), primary_key=True, autoincrement=False)
+
 
 class Program(db.Model):
     code = db.Column(db.String(10), primary_key=True, unique=True, autoincrement=False)
@@ -12,8 +14,13 @@ class Program(db.Model):
     active = db.Column(db.Boolean, default=True)
     program_type = db.Column(db.String(10), ForeignKey("program_mapping.program_type"))
 
+
 class Applicant(db.Model):
-    version = db.Column(db.Integer, primary_key=True)
+    version = db.Column(
+        db.Integer,
+        ForeignKey("file_control.version"),
+        primary_key=True,
+    )
     anticipated_entry_term = db.Column(db.String(30))
     erpid = db.Column(db.Integer, primary_key=True)
     prefix = db.Column(db.String(10))
@@ -35,7 +42,13 @@ class Applicant(db.Model):
     submitted = db.Column(db.Date)
     marked_complete = db.Column(db.Date)
 
+
 class Target(db.Model):
-    program_type = db.Column(db.String(10), ForeignKey('program_mapping.program_type'), primary_key=True, autoincrement=False)
+    program_type = db.Column(
+        db.String(10),
+        ForeignKey("program_mapping.program_type"),
+        primary_key=True,
+        autoincrement=False,
+    )
     year = db.Column(db.String(10), primary_key=True, autoincrement=False)
     target = db.Column(db.Integer)
