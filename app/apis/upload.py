@@ -37,7 +37,12 @@ class UploadApi(Resource):
             db.session.add(new_file)
             db.session.commit()
 
-            df = Parser.to_csv(file, is_csv=file.filename.endswith(".csv"))
-            Parser.insert_into_database(df, new_file.version)
+            try:
+                df = Parser.csv_to_df(file, is_csv=file.filename.endswith(".csv"))
+                Parser.insert_into_database(df, new_file.version)
+            except:
+                db.session.delete(new_file)
+                db.session.commit()
+                return {"message": "Error when inserting data"}, 500
 
         return {"message": "File Successfully Uploaded"}, 200
