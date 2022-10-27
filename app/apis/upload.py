@@ -32,7 +32,7 @@ class UploadApi(Resource):
             abort(406, description="no file found")
 
         if file and validate_file(file):
-            df = Parser.to_csv(file, is_csv=file.filename.endswith(".csv"))
+            df = Parser.csv_to_df(file, is_csv=file.filename.endswith(".csv"))
             Parser.insert_into_database(df)
 
         data = {"message": "file uploaded"}

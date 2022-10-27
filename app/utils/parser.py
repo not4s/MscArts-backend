@@ -5,6 +5,7 @@ from datetime import datetime
 from app.database import db 
 from faker import Faker
 from app.models.applicant import Applicant, Program
+from app.schemas.applicant import ApplicantSchema
 
 col_names = ['Version', 'Anticipated Entry Term', 'Erpid', 'Prefix', \
               'First Name', 'Last Name', 'Gender', 'Birth Date', \
@@ -25,13 +26,39 @@ def csv_to_df(filename, is_csv):
   else:
     return pd.read_excel(filename, names=col_names, header=None, keep_default_na=False)
 
+def applicant_data(row):
+  return Applicant(
+                version=row["version"],
+                anticipated_entry_term=row["Anticipated Entry Term"],
+                erpid=row["Erpid"],
+                prefix=row["Prefix"],
+                first_name=row["f_name"],
+                last_name=row["l_name"],
+                gender=row["Gender"],
+                nationality=row["Nationality"],
+                email=row["email"],
+                fee_status=row["Fee Status"],
+                program_code=row["program_code"],
+                status=row["Application Status"],
+                supplemental_complete="Yes"==row["Supplemental Items Complete"],
+                academic_eligibility=row["Academic Eligibility"],
+                folder_status=row["Folder Status"],
+                date_to_department=convert_time(row["Date Sent to Department"]),
+                department_status=row["Department Processing Status"],
+                special_case_status=row["Special Case Status"],
+                proposed_decision=row["Proposed Decision"],
+                submitted=convert_time(row["Submitted Date"]),
+                marked_complete=convert_time(row["Marked Complete Date"]),
+            )
+
+
 def generate_df_from_sql(query):
   pass
 
 def generate_df_from_db():
   program_data = db.session.query(Program).all()
   applicant_data = db.session.query(Applicant).all()
-  applicant_status_data = db.session.query(ApplicantStatus).all()
+  # applicant_status_data = db.session.query(ApplicantStatus).all()
 
   program_columns = ['Programme Code',
                      'Academic Program',
@@ -48,23 +75,23 @@ def generate_df_from_db():
                        'Email',
                        'Fee Status']
 
-  applicant_status_columns = ['Application Status',
-                              'Supplemental Items Complete',
-                              'Academic Eligibility',
-                              'Folder Status',
-                              'Date Sent to Department',
-                              'Department Processing Status',
-                              'Special Case Status',
-                              'Proposed Decision',
-                              'Submitted Date',
-                              'Marked Complete Date']
+  # applicant_status_columns = ['Application Status',
+  #                             'Supplemental Items Complete',
+  #                             'Academic Eligibility',
+  #                             'Folder Status',
+  #                             'Date Sent to Department',
+  #                             'Department Processing Status',
+  #                             'Special Case Status',
+  #                             'Proposed Decision',
+  #                             'Submitted Date',
+  #                             'Marked Complete Date']
 
-  program_df \
-    = pd.read_sql(sql = db.session.query(Program) \
-                         .with_entities(Program.code,
-                                        Program.name,
-                                        Program.application_type).statement, 
-                  con = db.session.bind, columns=program_columns)
+  # program_df \
+  #   = pd.read_sql(sql = db.session.query(Program) \
+  #                        .with_entities(Program.code,
+  #                                       Program.name,
+  #                                       Program.academic_level).statement, 
+  #                 con = db.session.bind, columns=program_columns)
   applicant_df \
     = pd.read_sql(sql = db.session.query(Applicant) \
                          .with_entities(Applicant.version,
@@ -77,30 +104,49 @@ def generate_df_from_db():
                                         Applicant.nationality,
                                         Applicant.email,
                                         Applicant.fee_status,
-                                        Applicant.program_code).statement, 
-                  con = db.session.bind, columns=applicant_columns)
-  applicant_status_df \
-    = pd.read_sql(sql = db.session.query(ApplicantStatus) \
-                         .with_entities(ApplicantStatus.status,
-                                        ApplicantStatus.supplemental_complete,
-                                        ApplicantStatus.academic_eligibility,
-                                        ApplicantStatus.folder_status,
-                                        ApplicantStatus.date_to_department,
-                                        ApplicantStatus.department_status,
-                                        ApplicantStatus.special_case_status,
-                                        ApplicantStatus.proposed_decision,
-                                        ApplicantStatus.submitted,
-                                        ApplicantStatus.marked_complete).statement, 
-                  con = db.session.bind, columns=applicant_status_columns)
+                                        Applicant.program_code,
+                                        Applicant.application_status,
+                                        Applicant.supplemental_complete,
+                                        Applicant.academic_eligibility,
+                                        Applicant.folder_status,
+                                        Applicant.date_to_department,
+                                        Applicant.department_status,
+                                        Applicant.special_case_status,
+                                        Applicant.proposed_decision,
+                                        Applicant.submitted,
+                                        Applicant.marked_complete).statement, 
+                  con = db.bind, columns=col_names)
+  # all_applicants = Applicant.query.all()
+  # applicant_df = pd.from_records(all_applicants, columns=col_names)
 
-  output_df = pd.concat([program_df, applicant_df, applicant_status_df], axis=1)
-  output_col_names = col_names[:]
-  output_col_names.remove('Birth Date')
-  output_col_names.remove('Academic College')
-  output_col_names.remove('IC Department')
-  output_col_names.remove('Academic Level')
+  # applicant_serializer = ApplicantSchema()
+  # all_applicants = [applicant_serializer.dump(d) for d in all_applicants]
 
-  return output_df[col_names]
+
+
+  # applicant_status_df \
+  #   = pd.read_sql(sql = db.session.query(ApplicantStatus) \
+  #                        .with_entities(ApplicantStatus.status,
+  #                                       ApplicantStatus.supplemental_complete,
+  #                                       ApplicantStatus.academic_eligibility,
+  #                                       ApplicantStatus.folder_status,
+  #                                       ApplicantStatus.date_to_department,
+  #                                       ApplicantStatus.department_status,
+  #                                       ApplicantStatus.special_case_status,
+  #                                       ApplicantStatus.proposed_decision,
+  #                                       ApplicantStatus.submitted,
+  #                                       ApplicantStatus.marked_complete).statement, 
+  #                 con = db.session.bind, columns=applicant_status_columns)
+
+  # output_df = pd.concat([program_df, applicant_df], axis=1)
+  # output_col_names = col_names[:]
+  # output_col_names.remove('Birth Date')
+  # output_col_names.remove('Academic College')
+  # output_col_names.remove('IC Department')
+  # output_col_names.remove('Academic Level')
+  print(applicant_df)
+
+  return applicant_df[col_names]
 
 
 
@@ -118,7 +164,7 @@ def insert_erpid(df):
 
 
 # inserts values in the given dataframe to the database
-def insert_into_database(df):
+def insert_into_database(df, file_version=0):
 
     df.dropna(how='all', inplace=True)
     df.reset_index(drop=True, inplace=True)
@@ -133,7 +179,7 @@ def insert_into_database(df):
     new_program_code = []
 
     program_codes = list(map(lambda x: x.code, Program.query.all()))
-    database_df = Parser.df
+    database_df = generate_df_from_db()
 
     for index, row in df.iterrows():
         if index == 0:
@@ -142,9 +188,9 @@ def insert_into_database(df):
         if df.iloc[index] in database_df:
           continue
 
-        f_name = row["First Name"] if row["First Name"] != "" else fake.first_name()
-        l_name = row["Last Name"] if row["Last Name"] != "" else fake.last_name()
-        email = row["Email"] if row["Email"] != "" else f'{f_name}.{l_name}@{fake.domain_name()}'
+        row["First Name"] = row["First Name"] if row["First Name"] else fake.first_name()
+        row["Last Name"] = row["Last Name"] if row["Last Name"] else fake.last_name()
+        row["Email"]  = row["Email"] if row["Email"] else f'{row["First Name"]}.{row["Last Name"]}@{fake.domain_name()}'
         # b_date = fake.date_between_dates(date_start=datetime(1980,1,1), date_end=datetime(2005,12,31)).year
 
         program_code = row["Programme Code"]
@@ -159,45 +205,15 @@ def insert_into_database(df):
             program_codes.append(program_code)
 
         # Fetch the latest version saved in db of the given erpid
-        version_parser = VersionParser()
-        version = version_parser.getLatestVersion(row["Erpid"])
+        # version_parser = VersionParser()
+        row["version"] = file_version
 
-        if not version: # If no prior version is in db
-          version = 1
-        else:
-          version += 1
+        # if not version: # If no prior version is in db
+        #   row["version"] = 1
+        # else:
+        #   row["version"] += 1
 
-        new_data.append(
-            Applicant(
-                version,
-                anticipated_entry_term=row["Anticipated Entry Term"],
-                erpid=row["Erpid"],
-                prefix=row["Prefix"],
-                first_name=f_name,
-                last_name=l_name,
-                gender=row["Gender"],
-                nationality=row["Nationality"],
-                email=email,
-                fee_status=row["Fee Status"],
-                program_code=program_code,
-            )
-        )
-
-        new_data.append(
-            ApplicantStatus(
-                id=row["Erpid"],
-                status=row["Application Status"],
-                supplemental_complete="Yes" == row["Supplemental Items Complete"],
-                academic_eligibility=row["Academic Eligibility"],
-                folder_status=row["Folder Status"],
-                date_to_department=convert_time(row["Date Sent to Department"]),
-                department_status=row["Department Processing Status"],
-                special_case_status=row["Special Case Status"],
-                proposed_decision=row["Proposed Decision"],
-                submitted=convert_time(row["Submitted Date"]),
-                marked_complete=convert_time(row["Marked Complete Date"]),
-            )
-        )
+        new_data.append(applicant_data(row))
 
     db.session.add_all(new_program_code)
     db.session.commit()
