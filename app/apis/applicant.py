@@ -125,11 +125,31 @@ class ApplicantApi(Resource):
                     query = query.filter(Applicant.__dict__[col] == filter_value)
 
         data = [applicant_deserializer.dump(d) for d in query.all()]
-
         if len(data) == 0:
             return data, 200
 
         count = request.args.get("count", default=None, type=str)
+        series = request.args.get("series", default='application_status', type=str)
+
+        if count and series:
+            df = pd.DataFrame(data)
+            counted = df[[count, series]].value_counts()
+            reformatted = []
+            for key, value in counted.items():
+                if (key[0].strip() != ""):
+                    combined = list(filter(lambda x: x[count] == 'Combined' and x["series"] == key[1], reformatted))
+                    if len(combined) > 0:
+                        reformatted.remove(combined[0])
+                        reformatted.append(
+                            {count: "Combined", "count": int(value) + combined[0]['count'], "type": key[0], "series": key[1]}
+                        )
+                    else:
+                        reformatted.append(
+                            {count: "Combined", "count": int(value), "type": key[0], "series": key[1]}
+                        )
+                    reformatted.append({count: key[0], "count": int(value), "type": key[0], "series": key[1]})
+            return reformatted, 200
+        
         if count:
             df = pd.DataFrame(data)
             counted = df[count].value_counts()
