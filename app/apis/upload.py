@@ -37,9 +37,7 @@ class UploadApi(Resource):
             db.session.add(new_file)
             db.session.commit()
 
-            print(f"Uploaded New File With Version: {new_file.version}")
-
-            # df = Parser.to_csv(file, is_csv=file.filename.endswith(".csv"))
-            # Parser.insert_into_database(df)
+            df = Parser.to_csv(file, is_csv=file.filename.endswith(".csv"))
+            Parser.insert_into_database(df, new_file.version)
 
         return {"message": "File Successfully Uploaded"}, 200
