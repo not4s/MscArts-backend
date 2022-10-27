@@ -29,7 +29,79 @@ def generate_df_from_sql(query):
   pass
 
 def generate_df_from_db():
-  
+  program_data = db.session.query(Program).all()
+  applicant_data = db.session.query(Applicant).all()
+  applicant_status_data = db.session.query(ApplicantStatus).all()
+
+  program_columns = ['Programme Code',
+                     'Academic Program',
+                     'Type']
+
+  applicant_columns = ['Version',
+                       'Anticipated Entry Term',
+                       'Erpid',
+                       'Prefix',
+                       'First Name',
+                       'Last Name',
+                       'Gender',
+                       'Nationality',
+                       'Email',
+                       'Fee Status']
+
+  applicant_status_columns = ['Application Status',
+                              'Supplemental Items Complete',
+                              'Academic Eligibility',
+                              'Folder Status',
+                              'Date Sent to Department',
+                              'Department Processing Status',
+                              'Special Case Status',
+                              'Proposed Decision',
+                              'Submitted Date',
+                              'Marked Complete Date']
+
+  program_df \
+    = pd.read_sql(sql = db.session.query(Program) \
+                         .with_entities(Program.code,
+                                        Program.name,
+                                        Program.application_type).statement, 
+                  con = db.session.bind, columns=program_columns)
+  applicant_df \
+    = pd.read_sql(sql = db.session.query(Applicant) \
+                         .with_entities(Applicant.version,
+                                        Applicant.anticipated_entry_term,
+                                        Applicant.erpid,
+                                        Applicant.prefix,
+                                        Applicant.first_name,
+                                        Applicant.last_name,
+                                        Applicant.gender,
+                                        Applicant.nationality,
+                                        Applicant.email,
+                                        Applicant.fee_status,
+                                        Applicant.program_code).statement, 
+                  con = db.session.bind, columns=applicant_columns)
+  applicant_status_df \
+    = pd.read_sql(sql = db.session.query(ApplicantStatus) \
+                         .with_entities(ApplicantStatus.status,
+                                        ApplicantStatus.supplemental_complete,
+                                        ApplicantStatus.academic_eligibility,
+                                        ApplicantStatus.folder_status,
+                                        ApplicantStatus.date_to_department,
+                                        ApplicantStatus.department_status,
+                                        ApplicantStatus.special_case_status,
+                                        ApplicantStatus.proposed_decision,
+                                        ApplicantStatus.submitted,
+                                        ApplicantStatus.marked_complete).statement, 
+                  con = db.session.bind, columns=applicant_status_columns)
+
+  output_df = pd.concat([program_df, applicant_df, applicant_status_df], axis=1)
+  output_col_names = col_names[:]
+  output_col_names.remove('Birth Date')
+  output_col_names.remove('Academic College')
+  output_col_names.remove('IC Department')
+  output_col_names.remove('Academic Level')
+
+  return output_df[col_names]
+
 
 
 def convert_time(time_str):
