@@ -1,9 +1,9 @@
 from app import api
 from app.database import db
-from app.models.applicant import Applicant, Target
+from app.models.applicant import Applicant, Target, Program
 from app.schemas.applicant import ApplicantSchema, TargetSchema
 from app.apis.user import read_access_required
-from sqlalchemy.sql import func, and_
+from app.utils.applicant import base_query
 from flask import request, abort
 from flask_restx import Resource
 import pandas as pd
@@ -123,24 +123,13 @@ class ApplicantAttributeApi(Resource):
 class ApplicantApi(Resource):
     @read_access_required
     def get(self):
-        latest_version = (
-            db.session.query(
-                Applicant.erpid.label("erpid"),
-                func.max(Applicant.version).label("version"),
-            )
-            .group_by(Applicant.erpid)
-            .subquery()
-        )
+        query = base_query()
 
-        query = Applicant.query
+        program_type_filter = request.args.get("program_type", default=None, type=str)
 
-        query = query.join(
-            latest_version,
-            and_(
-                latest_version.c.version == Applicant.version,
-                latest_version.c.erpid == Applicant.erpid,
-            ),
-        )
+        if program_type_filter is not None:
+            query = query.join(Program, Applicant.program_code == Program.code)
+            query = query.filter(Applicant.program_code == program_type_filter)
 
         for (col, col_type) in filters:
             filter_value = request.args.get(col, default=None, type=col_type)
