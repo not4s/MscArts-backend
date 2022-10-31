@@ -129,7 +129,7 @@ class ApplicantApi(Resource):
 
         if program_type_filter is not None:
             query = query.join(Program, Applicant.program_code == Program.code)
-            query = query.filter(Applicant.program_code == program_type_filter)
+            query = query.filter(Program.program_type == program_type_filter)
 
         for (col, col_type) in filters:
             filter_value = request.args.get(col, default=None, type=col_type)

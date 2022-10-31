@@ -136,15 +136,7 @@ def insert_into_database(df, file_version=0):
 
         program_code = row["Programme Code"]
         if program_code not in program_codes:
-            new_program_code.append(
-                Program(
-                    code=program_code,
-                    name=row["Academic Program"],
-                    academic_level=row["Type"],
-                )
-            )
-            program_codes.append(program_code)
-
+            continue
         # Fetch the latest version saved in db of the given erpid
         # version_parser = VersionParser()
         row["version"] = file_version
