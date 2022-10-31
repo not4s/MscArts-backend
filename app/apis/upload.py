@@ -1,4 +1,5 @@
 import os
+import traceback
 
 from app import api
 from app.database import db
@@ -52,6 +53,7 @@ class UploadApi(Resource):
             except:
                 db.session.delete(new_file)
                 db.session.commit()
+                traceback.print_exc()
                 return {"message": "Error when inserting data"}, 500
 
         return {"message": "File Successfully Uploaded"}, 200
