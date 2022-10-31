@@ -29,18 +29,30 @@ class ProgramAPI(Resource):
 
         body = request.json
 
+        program_type = body.get("program_type", None)
         code = body.get("code", None)
         name = body.get("name", None)
         academic_level = body.get("academic_level", None)
 
-        if code is None or name is None or academic_level is None:
+        if (
+            program_type is None
+            or code is None
+            or name is None
+            or academic_level is None
+        ):
             return {"message": "Malformed Request"}, 400
 
+        program_type = program_type.strip()
         code = code.strip()
         name = name.strip()
         academic_level = academic_level.strip()
 
-        new_program = Program(code=code, name=name, academic_level=academic_level)
+        new_program = Program(
+            program_type=program_type,
+            code=code,
+            name=name,
+            academic_level=academic_level,
+        )
         db.session.add(new_program)
         db.session.commit()
         return {"message": "Added new program"}, 200
@@ -74,14 +86,22 @@ class ProgramAPI(Resource):
 
         body = request.json
 
+        program_type = body.get("program_type", None)
         code = body.get("code", None)
         name = body.get("name", None)
         academic_level = body.get("academic_level", None)
         active = body.get("active", None)
 
-        if code is None or name is None or academic_level is None or active is None:
+        if (
+            program_type is None
+            or code is None
+            or name is None
+            or academic_level is None
+            or active is None
+        ):
             return {"message": "Malformed Request"}, 400
 
+        program_type = program_type.strip()
         code = code.strip()
         name = name.strip()
         academic_level = academic_level.strip()
@@ -91,6 +111,7 @@ class ProgramAPI(Resource):
         if program is None:
             return {"message": "No program with the specified code"}, 400
 
+        program.program_type = program_type
         program.name = name
         program.academic_level = academic_level
         program.active = active
