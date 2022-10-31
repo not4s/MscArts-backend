@@ -48,35 +48,6 @@ col_names_map = {
     "Enrolled (Opportunity) (Opportunity)" : "Enrolled Date",
 }
 
-col_names = [
-    "Anticipated Entry Term",
-    "Erpid",
-    "Prefix",
-    "First Name",
-    "Last Name",
-    "Gender",
-    "Birth Date",
-    "Nationality",
-    "Email",
-    "Fee Status",
-    "Type",
-    "Academic College",
-    "IC Department",
-    "Programme Code",
-    "Academic Program",
-    "Academic Level",
-    "Application Status",
-    "Supplemental Items Complete",
-    "Academic Eligibility",
-    "Folder Status",
-    "Date Sent to Department",
-    "Department Processing Status",
-    "Special Case Status",
-    "Proposed Decision",
-    "Submitted Date",
-    "Marked Complete Date",
-]
-
 # File extension check
 def csv_to_df(filename, is_csv):
 
