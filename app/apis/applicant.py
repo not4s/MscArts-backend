@@ -58,9 +58,12 @@ class ApplicantApi(Resource):
 
         program_type = program_type.strip()
 
-        new_target = Target(program_type=program_type, year=year, target=target)
-        db.session.add(new_target)
-        db.session.commit()
+        try:
+            new_target = Target(program_type=program_type, year=year, target=target)
+            db.session.add(new_target)
+            db.session.commit()
+        except:
+            return {"message": "Exists"}, 200
 
         # program_type=request.args.get("type", default=None, type=str)
         # year = request.args.get("year", default=None, type=str)
