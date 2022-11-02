@@ -1,13 +1,12 @@
 from app import api
 from app.database import db
-from app.models.applicant import Applicant, Target, Program
-from app.schemas.applicant import ApplicantSchema, TargetSchema
+from app.models.applicant import Applicant, Program
+from app.schemas.applicant import ApplicantSchema
 from app.apis.user import read_access_required
 from app.utils.applicant import base_query
 from flask import request, abort
 from flask_restx import Resource
 import pandas as pd
-import random
 
 applicant_api = api.namespace("api/applicant", description="Applicant API")
 
