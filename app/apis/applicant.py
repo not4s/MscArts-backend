@@ -20,6 +20,7 @@ filters = [
     ("combined_fee_status", str),
 ]
 
+
 @applicant_api.route("/attribute", methods=["GET"])
 class ApplicantAttributeApi(Resource):
     def get(self):
@@ -66,7 +67,7 @@ class ApplicantApi(Resource):
             return data, 200
 
         count = request.args.get("count", default=None, type=str)
-        series = request.args.get("series", default="application_status", type=str)
+        series = request.args.get("series", default=None, type=str)
 
         if count and series:
             df = pd.DataFrame(data)
