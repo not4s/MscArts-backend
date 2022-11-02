@@ -7,58 +7,76 @@ from faker import Faker
 from app.models.applicant import Applicant, Program
 from app.schemas.applicant import ApplicantSchema
 
-col_names = [
-    "Anticipated Entry Term",
-    "Erpid",
-    "Prefix",
-    "First Name",
-    "Last Name",
-    "Gender",
-    "Birth Date",
-    "Nationality",
-    "Email",
-    "Fee Status",
-    "Type",
-    "Academic College",
-    "IC Department",
-    "Programme Code",
-    "Academic Program",
-    "Academic Level",
-    "Application Status",
-    "Supplemental Items Complete",
-    "Academic Eligibility",
-    "Folder Status",
-    "Date Sent to Department",
-    "Department Processing Status",
-    "Special Case Status",
-    "Proposed Decision",
-    "Submitted Date",
-    "Marked Complete Date",
-]
+col_names_map = {
+    "erpid (Prospect) (Person)" : "Erpid", 
+    "Prospect Gender (Prospect) (Person)" : "Gender", 
+    "Prefix (Prospect) (Person)" : "Prefix",	
+    "First Name (Prospect) (Person)" : "First Name",	
+    "Last Name (Prospect) (Person)" : "Last Name",
+    "Birth Date (Prospect) (Person)" : "Birth Date",
+    "IC Ethnicity (Prospect) (Person)" : "Ethnicity",
+    "Email Address (Prospect) (Person)" : "Email",
+    "Application Type" : "Type",
+    "Academic College (Academic Program) (Academic Programme)" : "Academic College",
+    "IC Department (Academic Program) (Academic Programme)" : "IC Department", 
+    "Disability Type (Application) (Application)" : "Disability Type", 
+    "Primary Nationality (Prospect) (Person)" : "Primary Nationality", 
+    "Country of Residency (Application) (Application)" : "Country of Residency", 
+    "Application Folder Fee Status" : "Application Folder Fee Status",	
+    "Combined Fee Status" : "Combined Fee Status", 
+    "Admissions Cycle (Opportunity) (Opportunity)" : "Admissions Cycle", 
+    "Anticipated Entry Term (Application) (Application)" : "Anticipated Entry Term", 
+    "Academic Program (Application) (Application)" : "Academic Program", 
+    "Programme Code (Academic Program) (Academic Programme)" : "Programme Code",  
+    "Academic Level (Application) (Application)" : "Academic Level",
+    "Application Status (Application) (Application)" : "Application Status", 
+    "Supplemental Items Complete (Application) (Application)" : "Supplemental Items Complete",
+    "Department Processing Status" : "Department Processing Status",
+    "Special Case Status" : "Special Case Status",
+    "Folder Status" : "Folder Status", 
+    "Academic Eligibility" : "Academic Eligibility", 
+    "Proposed Decision" : "Proposed Decision", 
+    "Decision Status" : "Decision Status", 
+    "Status (Opportunity) (Opportunity)" : "Status", 
+    "Status Reason (Opportunity) (Opportunity)" : "Status Reason", 
+    "Submitted (Opportunity) (Opportunity)" : "Submitted Date",  
+    "Withdrawn (Opportunity) (Opportunity)" : "Withdrawn Date",  
+    "Marked Complete (Opportunity) (Opportunity)" : "Marked Complete Date", 
+    "Date Sent to Department" : "Date Sent to Department",	
+    "Admitted (Opportunity) (Opportunity)" : "Admitted Date", 
+    "Deferred (Opportunity) (Opportunity)" : "Deferred Date",  
+    "Enrolled (Opportunity) (Opportunity)" : "Enrolled Date",
+}
 
 # File extension check
 def csv_to_df(filename, is_csv):
 
     if is_csv:
-        return pd.read_csv(filename, names=col_names, header=None)
+        df = pd.read_csv(filename)
+        return df.rename(columns=col_names_map)
     else:
-        return pd.read_excel(
-            filename, names=col_names, header=None, keep_default_na=False
-        )
+        df = pd.read_excel(filename, keep_default_na=False)
+        return df.rename(columns=col_names_map)
 
 
 def applicant_data(row):
     return Applicant(
         version=row["version"],
         anticipated_entry_term=row["Anticipated Entry Term"],
+        admissions_cycle=row["Admissions Cycle"],
         erpid=row["Erpid"],
         prefix=row["Prefix"],
         first_name=row["First Name"],
         last_name=row["Last Name"],
         gender=row["Gender"],
-        nationality=row["Nationality"],
+        birth_date=convert_time(row["Birth Date"]),
+        nationality=row["Primary Nationality"],
+        ethnicity=row["Ethnicity"],
+        disability=row["Disability Type"],
+        country_of_residency=row["Country of Residency"],
         email=row["Email"],
-        fee_status=row["Fee Status"],
+        application_folder_fee_status=row["Application Folder Fee Status"],
+        combined_fee_status=row["Combined Fee Status"],
         program_code=row["Programme Code"],
         application_status=row["Application Status"],
         supplemental_complete="Yes" == row["Supplemental Items Complete"],
@@ -68,7 +86,14 @@ def applicant_data(row):
         department_status=row["Department Processing Status"],
         special_case_status=row["Special Case Status"],
         proposed_decision=row["Proposed Decision"],
+        decision_status=row["Decision Status"],
+        status=row["Status"],
+        status_reason=row["Status Reason"],
         submitted=convert_time(row["Submitted Date"]),
+        withdrawn=convert_time(row["Withdrawn Date"]),
+        admitted=convert_time(row["Admitted Date"]),
+        deferred=convert_time(row["Deferred Date"]),
+        enrolled=convert_time(row["Enrolled Date"]),
         marked_complete=convert_time(row["Marked Complete Date"]),
     )
 
@@ -97,9 +122,12 @@ def insert_erpid(df):
 
 # inserts values in the given dataframe to the database
 def insert_into_database(df, file_version=0):
-
     df.dropna(how="all", inplace=True)
     df.reset_index(drop=True, inplace=True)
+
+    # insert empty columns for all columns in our column name map that don't exist in the df
+    for col in col_names_map.values():
+        df[col] = df[col] if col in df.columns else ""
     df["First Name"] = df["First Name"].fillna("")
     df["Last Name"] = df["Last Name"].fillna("")
     df["Email"] = df["Email"].fillna("")
@@ -118,7 +146,6 @@ def insert_into_database(df, file_version=0):
     for d in database_data:
         del d["version"]
 
-    df = df.iloc[1:, :]
     df = df.reindex(df.columns.tolist() + ["version"], axis=1)
 
     for index, row in df.iterrows():
@@ -136,7 +163,16 @@ def insert_into_database(df, file_version=0):
 
         program_code = row["Programme Code"]
         if program_code not in program_codes:
-            continue
+            new_program_code.append(
+                Program(
+                    code=program_code,
+                    name=row["Academic Program"],
+                    academic_level=row["Type"],
+                    active=False,
+                )
+            )
+            program_codes.append(program_code)
+
         # Fetch the latest version saved in db of the given erpid
         # version_parser = VersionParser()
         row["version"] = file_version
