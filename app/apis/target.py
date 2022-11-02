@@ -38,7 +38,7 @@ class ApplicantApi(Resource):
             query = query.filter(Program.program_type == target['program_type'], 
                                  Applicant.admissions_cycle == target['year'],
                                  Applicant.decision_status.in_(live))
-            data[i] = {**target, "progress": query.count() / target['target']}
+            data[i] = {**target, "progress": query.count()}
 
         return data, 200
 
