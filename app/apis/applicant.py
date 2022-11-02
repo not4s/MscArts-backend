@@ -1,19 +1,16 @@
 from app import api
 from app.database import db
-from app.models.applicant import Applicant, Target, Program
-from app.schemas.applicant import ApplicantSchema, TargetSchema
+from app.models.applicant import Applicant, Program
+from app.schemas.applicant import ApplicantSchema
 from app.apis.user import read_access_required
 from app.utils.applicant import base_query
 from flask import request, abort
 from flask_restx import Resource
 import pandas as pd
-import random
 
 applicant_api = api.namespace("api/applicant", description="Applicant API")
 
 applicant_deserializer = ApplicantSchema()
-
-target_deserializer = TargetSchema()
 
 filters = [
     ("gender", str),
@@ -22,84 +19,6 @@ filters = [
     ("erpid", int),
     ("fee_status", str),
 ]
-
-
-@applicant_api.route("/target", methods=["GET", "POST", "PUT"])
-class ApplicantApi(Resource):
-    def get(self):
-        program_type = request.args.get("type", default=None, type=str)
-        year = request.args.get("year", default=None, type=str)
-        query = db.session.query(Target)
-        if program_type is not None:
-            query = query.filter_by(program_type=program_type)
-        if year is not None:
-            query = query.filter_by(year=year)
-
-        data = [target_deserializer.dump(d) for d in query.all()]
-
-        # TODO: track the progress
-        for i, target in enumerate(data):
-            data[i] = {**target, "progress": random.randint(1, 100)}
-
-        return data, 200
-
-    def post(self):
-        if not request.is_json:
-            abort(406, description="MIME type is required to be application/json.")
-
-        body = request.json
-
-        program_type = body.get("program_type", None)
-        year = body.get("year", None)
-        target = body.get("target", None)
-
-        if program_type is None or year is None or target is None:
-            return {"message": "Malformed Request"}, 400
-
-        program_type = program_type.strip()
-
-        try:
-            new_target = Target(program_type=program_type, year=year, target=target)
-            db.session.add(new_target)
-            db.session.commit()
-        except:
-            return {"message": "Exists"}, 200
-
-        # program_type=request.args.get("type", default=None, type=str)
-        # year = request.args.get("year", default=None, type=str)
-        # target = request.args.get("target", default=None, type=int)
-
-        # db.session.add(Target(program_type=program_type, year=year, target=target))
-        # db.session.commit()
-
-        return {"message": "Uploaded Target"}, 200
-
-    def put(self):
-        if not request.is_json:
-            abort(406, description="MIME type is required to be application/json.")
-
-        body = request.json
-
-        program_type = body.get("program_type", None)
-        year = body.get("year", None)
-        target_num = body.get("target", None)
-
-        if program_type is None or year is None or target_num is None:
-            return {"message": "Malformed Request"}, 400
-
-        program_type = program_type.strip()
-
-        target = Target.query.filter_by(program_type=program_type, year=year).first()
-
-        if target is None:
-            return {"message": "No program with the specified code"}, 400
-
-        target.program_type = program_type
-        target.year = year
-        target.target = target_num
-        db.session.commit()
-        return {"message": "Updated Target"}, 200
-
 
 @applicant_api.route("/attribute", methods=["GET"])
 class ApplicantAttributeApi(Resource):
