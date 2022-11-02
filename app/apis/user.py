@@ -1,5 +1,7 @@
+import json
 from app import api, ldap_service
 from app.database import db
+from app.schemas.user_access import UserAccessSchema
 from jwt import DecodeError, ExpiredSignatureError, InvalidSignatureError
 from flask_jwt_extended.exceptions import (
     InvalidHeaderError,
@@ -197,3 +199,13 @@ class UserRoles(Resource):
         user.access = access
         db.session.commit()
         return {"message": "Successfully updated user access"}, 200
+
+@user_api.route("/access", methods=["GET"])
+class UserRoleTable(Resource):
+    @admin_required
+    def get(self):
+        query = UserAccess.query.all()
+        user_access_deserializer = UserAccessSchema()
+
+        data = [user_access_deserializer.dump(d) for d in query]
+        return data, 200
