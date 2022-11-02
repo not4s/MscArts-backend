@@ -20,6 +20,13 @@ filters = [
     ("combined_fee_status", str),
 ]
 
+live = ['Condition Firm',
+        'Condition Pending',
+        'Uncondition Firm',
+        'Uncondition Firm Temp',
+        'Unconditional Firm Temp',
+        'Uncondition Pending']
+
 
 @applicant_api.route("/attribute", methods=["GET"])
 class ApplicantAttributeApi(Resource):
@@ -46,10 +53,15 @@ class ApplicantApi(Resource):
         query = base_query()
 
         program_type_filter = request.args.get("program_type", default=None, type=str)
+        decision_status_filter = request.args.get("decision_status", default=None, type=str)
 
         if program_type_filter is not None:
             query = query.join(Program, Applicant.program_code == Program.code)
             query = query.filter(Program.program_type == program_type_filter)
+        
+        if decision_status_filter == 'live':
+            query = query.filter(Applicant.decision_status.in_(live))
+            # TODO: cleared/paid/accepted
 
         for (col, col_type) in filters:
             filter_value = request.args.get(col, default=None, type=col_type)
