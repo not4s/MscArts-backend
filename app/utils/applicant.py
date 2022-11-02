@@ -13,9 +13,7 @@ def base_query():
         .subquery()
     )
 
-    query = Applicant.query
-
-    query = query.join(
+    query = Applicant.query.join(
         latest_version,
         and_(
             latest_version.c.version == Applicant.version,

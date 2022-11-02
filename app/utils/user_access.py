@@ -12,6 +12,9 @@ def getAccessLevel(username):
             access = 2
         elif username == "admin":
             access = 3
+        else:
+            user = UserAccess.query.filter(UserAccess.username == username).all()
+            return user if user != [] else None
 
         return [UserAccess(username=username, access=access)]
 
