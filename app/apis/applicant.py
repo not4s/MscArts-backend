@@ -17,7 +17,7 @@ filters = [
     ("nationality", str),
     ("program_code", str),
     ("erpid", int),
-    ("fee_status", str),
+    ("combined_fee_status", str),
 ]
 
 @applicant_api.route("/attribute", methods=["GET"])
