@@ -23,7 +23,7 @@ class Applicant(db.Model):
     )
     program_code = db.Column(db.String(10), ForeignKey("program.code"), primary_key=True)
     anticipated_entry_term = db.Column(db.String(30))
-    admissions_cycle = db.Column(db.String(5))
+    admissions_cycle = db.Column(db.String(4))
     erpid = db.Column(db.Integer, primary_key=True)
     prefix = db.Column(db.String(10))
     first_name = db.Column(db.String(80))

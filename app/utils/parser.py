@@ -48,13 +48,15 @@ col_names_map = {
     "Enrolled (Opportunity) (Opportunity)": "Enrolled Date",
 }
 
+drop_columns = ["(Do Not Modify) Application Folder", "(Do Not Modify) Row Checksum", "(Do Not Modify) Modified On"]
+
 # File extension check
 def csv_to_df(filename, is_csv):
     if is_csv:
         df = pd.read_csv(filename)
         return df.rename(columns=col_names_map)
     else:
-        df = pd.read_excel(filename, keep_default_na=False)
+        df = pd.read_excel(filename)
         return df.rename(columns=col_names_map)
 
 
@@ -118,6 +120,8 @@ def convert_time(time_str):
 def insert_erpid(df):
     df["Erpid"] = range(1, df.shape[0] + 1)
 
+def insert_admissions_cycle(df):
+    df["Admissions Cycle"] = df["Anticipated Entry Term"].apply(lambda x: str(x).split()[1].split('-')[0])
 
 def parse_to_models(df):
     df.dropna(how="all", inplace=True)
@@ -125,10 +129,14 @@ def parse_to_models(df):
 
     # insert empty columns for all columns in our column name map that don't exist in the df
     for col in col_names_map.values():
+        if col == "Admissions Cycle" and col not in df.columns:
+            # insert admissions cycle into the columns
+            insert_admissions_cycle(df)
         df[col] = df[col] if col in df.columns else ""
     df["First Name"] = df["First Name"].fillna("")
     df["Last Name"] = df["Last Name"].fillna("")
     df["Email"] = df["Email"].fillna("")
+    df["Admissions Cycle"] = df["Admissions Cycle"].apply(lambda x: str(x)[:4])
     insert_erpid(df)
 
     fake = Faker()
@@ -157,6 +165,8 @@ def parse_to_models(df):
 
 # inserts values in the given dataframe to the database
 def insert_into_database(df, file_version=0, mock=False):
+    # drop not needed columns and empty rows
+    df.drop(labels=(set(drop_columns) & set(df.columns)), axis=1, inplace=True)
     df.dropna(how="all", inplace=True)
     df.reset_index(drop=True, inplace=True)
 
@@ -201,7 +211,7 @@ def insert_into_database(df, file_version=0, mock=False):
         # b_date = fake.date_between_dates(date_start=datetime(1980,1,1), date_end=datetime(2005,12,31)).year
 
         program_code = row["Programme Code"]
-        if program_code not in program_codes:
+        if program_code and program_code not in program_codes:
             new_program_code.append(
                 Program(
                     code=program_code,
