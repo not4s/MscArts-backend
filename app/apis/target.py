@@ -19,7 +19,7 @@ live = ['Condition Firm',
         'Unconditional Firm Temp',
         'Uncondition Pending']
 
-@target_api.route("/", methods=["GET", "POST", "PUT"])
+@target_api.route("/", methods=["GET", "POST", "PUT", "DELETE"])
 class ApplicantApi(Resource):
     def get(self):
         program_type = request.args.get("type", default=None, type=str)
@@ -98,3 +98,23 @@ class ApplicantApi(Resource):
         target.target = target_num
         db.session.commit()
         return {"message": "Updated Target"}, 200
+
+    def delete(self):
+        if not request.is_json:
+            abort(406, description="MIME type is required to be application/json.")
+
+        body = request.json
+
+        program_type = body.get("program_type", None)
+        year = body.get("year", None)
+        
+        if program_type is None or year is None:
+            return {"message": "Malformed Request"}, 400
+
+        program_type = program_type.strip()
+        try:
+            Target.query.filter_by(program_type=program_type,year=year).delete()
+            db.session.commit()
+            return {"message": "Deleted"}, 200
+        except Exception as e:
+            return {"message": "Could not delete"}, 200
