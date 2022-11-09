@@ -60,7 +60,8 @@ class ApplicantApi(Resource):
             query = query.filter(Program.program_type == program_type_filter)
         
         if decision_status_filter == 'live':
-            query = query.filter(Applicant.decision_status.in_(live))
+            # live applicants haven't been enrolled yet (they could still come)
+            query = query.filter(Applicant.decision_status.in_(live), Applicant.enrolled.is_(None))
             # TODO: cleared/paid/accepted
 
         for (col, col_type) in filters:
@@ -75,6 +76,8 @@ class ApplicantApi(Resource):
         # query = query.filter().group_by(Applicant.erpid)
 
         data = [applicant_deserializer.dump(d) for d in query.all()]
+
+        print(len(data))
         if len(data) == 0:
             return data, 200
 
