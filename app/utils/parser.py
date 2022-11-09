@@ -50,7 +50,6 @@ col_names_map = {
 
 # File extension check
 def csv_to_df(filename, is_csv):
-
     if is_csv:
         df = pd.read_csv(filename)
         return df.rename(columns=col_names_map)
@@ -167,7 +166,6 @@ def insert_into_database(df, file_version=0, mock=False):
     df["First Name"] = df["First Name"].fillna("")
     df["Last Name"] = df["Last Name"].fillna("")
     df["Email"] = df["Email"].fillna("")
-    insert_erpid(df)
 
     fake = Faker()
     Faker.seed(137920)
@@ -184,6 +182,8 @@ def insert_into_database(df, file_version=0, mock=False):
 
     df = df.reindex(df.columns.tolist() + ["version"], axis=1)
 
+    erpid = 1
+
     for index, row in df.iterrows():
 
         row["First Name"] = (
@@ -195,6 +195,9 @@ def insert_into_database(df, file_version=0, mock=False):
             if row["Email"]
             else f'{row["First Name"]}.{row["Last Name"]}@{fake.domain_name()}'
         )
+        if not row["Erpid"]:
+            row["Erpid"] = erpid
+            erpid += 1
         # b_date = fake.date_between_dates(date_start=datetime(1980,1,1), date_end=datetime(2005,12,31)).year
 
         program_code = row["Programme Code"]
