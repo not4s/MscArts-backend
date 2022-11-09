@@ -6,7 +6,7 @@ from app.utils.applicant import base_query
 from flask import request, abort
 from flask_restx import Resource
 
-target_api = api.namespace("api/target", description="Applicant API")
+target_api = api.namespace("api/target", description="Target API")
 
 target_deserializer = TargetSchema()
 
