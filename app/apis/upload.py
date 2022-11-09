@@ -8,7 +8,8 @@ from flask_restx import Resource
 import app.utils.parser as Parser
 from app.apis.user import write_access_required, admin_required
 from werkzeug.utils import secure_filename
-from app.models.applicant import Applicant
+from app.models.applicant import Applicant, Program
+from app.schemas.applicant import ProgramSchema
 from app.models.files import FileControl
 from app.schemas.files import FileControlSchema
 
@@ -18,10 +19,41 @@ upload_api = api.namespace("api/upload", description="Test API")
 ALLOWED_EXTENSIONS = {"xlsx", "csv"}
 
 file_control_serializer = FileControlSchema()
+program_serializer = ProgramSchema()
 
 
 def validate_file(file):
     return True
+
+
+@upload_api.route("/mock", methods=["POST"])
+class MockUploadApi(Resource):
+    @write_access_required
+    def post(self):
+        if "file" not in request.files:
+            abort(406, description="No Files Found")
+
+        file = request.files["file"]
+
+        if file.filename == "":
+            abort(406, description="No File found")
+
+        if file and validate_file(file):
+            df = Parser.csv_to_df(file, is_csv=file.filename.endswith(".csv"))
+            data = Parser.parse_to_models(df)
+
+        progs = [
+            {"code": d.code, "program_type": d.program_type}
+            for d in Program.query.all()
+        ]
+        print(progs)
+        for d in data:
+            prog_type = list(filter(lambda x: x["code"] == d["program_code"], progs))
+            d["program_type"] = (
+                prog_type[0]["program_type"] if len(prog_type) == 1 else None
+            )
+
+        return data, 200
 
 
 @upload_api.route("/", methods=["GET", "POST", "DELETE"])
@@ -32,7 +64,7 @@ class UploadApi(Resource):
         data = [file_control_serializer.dump(d) for d in files]
         return data, 200
 
-    @write_access_required
+    @admin_required
     def post(self):
         if "file" not in request.files:
             abort(406, description="No Files Found")

@@ -8,44 +8,44 @@ from app.models.applicant import Applicant, Program
 from app.schemas.applicant import ApplicantSchema
 
 col_names_map = {
-    "erpid (Prospect) (Person)" : "Erpid", 
-    "Prospect Gender (Prospect) (Person)" : "Gender", 
-    "Prefix (Prospect) (Person)" : "Prefix",	
-    "First Name (Prospect) (Person)" : "First Name",	
-    "Last Name (Prospect) (Person)" : "Last Name",
-    "Birth Date (Prospect) (Person)" : "Birth Date",
-    "IC Ethnicity (Prospect) (Person)" : "Ethnicity",
-    "Email Address (Prospect) (Person)" : "Email",
-    "Application Type" : "Type",
-    "Academic College (Academic Program) (Academic Programme)" : "Academic College",
-    "IC Department (Academic Program) (Academic Programme)" : "IC Department", 
-    "Disability Type (Application) (Application)" : "Disability Type", 
-    "Primary Nationality (Prospect) (Person)" : "Primary Nationality", 
-    "Country of Residency (Application) (Application)" : "Country of Residency", 
-    "Application Folder Fee Status" : "Application Folder Fee Status",	
-    "Combined Fee Status" : "Combined Fee Status", 
-    "Admissions Cycle (Opportunity) (Opportunity)" : "Admissions Cycle", 
-    "Anticipated Entry Term (Application) (Application)" : "Anticipated Entry Term", 
-    "Academic Program (Application) (Application)" : "Academic Program", 
-    "Programme Code (Academic Program) (Academic Programme)" : "Programme Code",  
-    "Academic Level (Application) (Application)" : "Academic Level",
-    "Application Status (Application) (Application)" : "Application Status", 
-    "Supplemental Items Complete (Application) (Application)" : "Supplemental Items Complete",
-    "Department Processing Status" : "Department Processing Status",
-    "Special Case Status" : "Special Case Status",
-    "Folder Status" : "Folder Status", 
-    "Academic Eligibility" : "Academic Eligibility", 
-    "Proposed Decision" : "Proposed Decision", 
-    "Decision Status" : "Decision Status", 
-    "Status (Opportunity) (Opportunity)" : "Status", 
-    "Status Reason (Opportunity) (Opportunity)" : "Status Reason", 
-    "Submitted (Opportunity) (Opportunity)" : "Submitted Date",  
-    "Withdrawn (Opportunity) (Opportunity)" : "Withdrawn Date",  
-    "Marked Complete (Opportunity) (Opportunity)" : "Marked Complete Date", 
-    "Date Sent to Department" : "Date Sent to Department",	
-    "Admitted (Opportunity) (Opportunity)" : "Admitted Date", 
-    "Deferred (Opportunity) (Opportunity)" : "Deferred Date",  
-    "Enrolled (Opportunity) (Opportunity)" : "Enrolled Date",
+    "erpid (Prospect) (Person)": "Erpid",
+    "Prospect Gender (Prospect) (Person)": "Gender",
+    "Prefix (Prospect) (Person)": "Prefix",
+    "First Name (Prospect) (Person)": "First Name",
+    "Last Name (Prospect) (Person)": "Last Name",
+    "Birth Date (Prospect) (Person)": "Birth Date",
+    "IC Ethnicity (Prospect) (Person)": "Ethnicity",
+    "Email Address (Prospect) (Person)": "Email",
+    "Application Type": "Type",
+    "Academic College (Academic Program) (Academic Programme)": "Academic College",
+    "IC Department (Academic Program) (Academic Programme)": "IC Department",
+    "Disability Type (Application) (Application)": "Disability Type",
+    "Primary Nationality (Prospect) (Person)": "Primary Nationality",
+    "Country of Residency (Application) (Application)": "Country of Residency",
+    "Application Folder Fee Status": "Application Folder Fee Status",
+    "Combined Fee Status": "Combined Fee Status",
+    "Admissions Cycle (Opportunity) (Opportunity)": "Admissions Cycle",
+    "Anticipated Entry Term (Application) (Application)": "Anticipated Entry Term",
+    "Academic Program (Application) (Application)": "Academic Program",
+    "Programme Code (Academic Program) (Academic Programme)": "Programme Code",
+    "Academic Level (Application) (Application)": "Academic Level",
+    "Application Status (Application) (Application)": "Application Status",
+    "Supplemental Items Complete (Application) (Application)": "Supplemental Items Complete",
+    "Department Processing Status": "Department Processing Status",
+    "Special Case Status": "Special Case Status",
+    "Folder Status": "Folder Status",
+    "Academic Eligibility": "Academic Eligibility",
+    "Proposed Decision": "Proposed Decision",
+    "Decision Status": "Decision Status",
+    "Status (Opportunity) (Opportunity)": "Status",
+    "Status Reason (Opportunity) (Opportunity)": "Status Reason",
+    "Submitted (Opportunity) (Opportunity)": "Submitted Date",
+    "Withdrawn (Opportunity) (Opportunity)": "Withdrawn Date",
+    "Marked Complete (Opportunity) (Opportunity)": "Marked Complete Date",
+    "Date Sent to Department": "Date Sent to Department",
+    "Admitted (Opportunity) (Opportunity)": "Admitted Date",
+    "Deferred (Opportunity) (Opportunity)": "Deferred Date",
+    "Enrolled (Opportunity) (Opportunity)": "Enrolled Date",
 }
 
 # File extension check
@@ -120,8 +120,44 @@ def insert_erpid(df):
     df["Erpid"] = range(1, df.shape[0] + 1)
 
 
+def parse_to_models(df):
+    df.dropna(how="all", inplace=True)
+    df.reset_index(drop=True, inplace=True)
+
+    # insert empty columns for all columns in our column name map that don't exist in the df
+    for col in col_names_map.values():
+        df[col] = df[col] if col in df.columns else ""
+    df["First Name"] = df["First Name"].fillna("")
+    df["Last Name"] = df["Last Name"].fillna("")
+    df["Email"] = df["Email"].fillna("")
+    insert_erpid(df)
+
+    fake = Faker()
+    Faker.seed(137920)
+    new_data = []
+    new_program_code = []
+    applicant_serializer = ApplicantSchema()
+    df = df.reindex(df.columns.tolist() + ["version"], axis=1)
+
+    for index, row in df.iterrows():
+
+        row["First Name"] = (
+            row["First Name"] if row["First Name"] else fake.first_name()
+        )
+        row["Last Name"] = row["Last Name"] if row["Last Name"] else fake.last_name()
+        row["Email"] = (
+            row["Email"]
+            if row["Email"]
+            else f'{row["First Name"]}.{row["Last Name"]}@{fake.domain_name()}'
+        )
+        row["version"] = -1
+        new_applicant = applicant_data(row)
+        new_data.append(applicant_serializer.dump(new_applicant))
+    return new_data
+
+
 # inserts values in the given dataframe to the database
-def insert_into_database(df, file_version=0):
+def insert_into_database(df, file_version=0, mock=False):
     df.dropna(how="all", inplace=True)
     df.reset_index(drop=True, inplace=True)
 
