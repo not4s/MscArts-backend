@@ -63,6 +63,8 @@ class ApplicantApi(Resource):
             # live applicants haven't been enrolled yet (they could still come)
             query = query.filter(Applicant.decision_status.in_(live), Applicant.enrolled.is_(None))
             # TODO: cleared/paid/accepted
+        elif decision_status_filter == 'not_live':
+            query = query.filter(Applicant.decision_status.notin_(live))
 
         for (col, col_type) in filters:
             filter_value = request.args.get(col, default=None, type=col_type)
@@ -77,7 +79,6 @@ class ApplicantApi(Resource):
 
         data = [applicant_deserializer.dump(d) for d in query.all()]
 
-        print(len(data))
         if len(data) == 0:
             return data, 200
 
