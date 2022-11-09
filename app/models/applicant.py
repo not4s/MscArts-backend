@@ -21,6 +21,7 @@ class Applicant(db.Model):
         ForeignKey("file_control.version"),
         primary_key=True,
     )
+    program_code = db.Column(db.String(10), ForeignKey("program.code"), primary_key=True)
     anticipated_entry_term = db.Column(db.String(30))
     admissions_cycle = db.Column(db.String(5))
     erpid = db.Column(db.Integer, primary_key=True)
@@ -36,7 +37,6 @@ class Applicant(db.Model):
     email = db.Column(db.String(120))
     application_folder_fee_status = db.Column(db.String(20))
     combined_fee_status = db.Column(db.String(20))
-    program_code = db.Column(db.String(10), ForeignKey("program.code"))
     application_status = db.Column(db.String(80))
     supplemental_complete = db.Column(db.Boolean)
     academic_eligibility = db.Column(db.String(80))
