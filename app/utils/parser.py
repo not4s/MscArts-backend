@@ -129,9 +129,9 @@ def parse_to_models(df):
 
     # insert empty columns for all columns in our column name map that don't exist in the df
     for col in col_names_map.values():
-        if col == "Admissions Cycle" and col not in df.columns:
-            # insert admissions cycle into the columns
-            insert_admissions_cycle(df)
+        # if col == "Admissions Cycle" and col not in df.columns:
+        #     # insert admissions cycle into the columns
+        #     insert_admissions_cycle(df)
         df[col] = df[col] if col in df.columns else ""
     df["First Name"] = df["First Name"].fillna("")
     df["Last Name"] = df["Last Name"].fillna("")
@@ -169,9 +169,11 @@ def insert_into_database(df, file_version=0, mock=False):
     df.drop(labels=(set(drop_columns) & set(df.columns)), axis=1, inplace=True)
     df.dropna(how="all", inplace=True)
     df.reset_index(drop=True, inplace=True)
-
     # insert empty columns for all columns in our column name map that don't exist in the df
     for col in col_names_map.values():
+        if col == "Admissions Cycle" and col not in df.columns:
+            # insert admissions cycle into the columns
+            insert_admissions_cycle(df)
         df[col] = df[col] if col in df.columns else ""
     df["First Name"] = df["First Name"].fillna("")
     df["Last Name"] = df["Last Name"].fillna("")
