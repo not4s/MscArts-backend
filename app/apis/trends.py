@@ -21,9 +21,9 @@ class TrendsApi(Resource):
       # get all the years
       years_data = [applicant_deserializer.dump(d) for d in db.session.query(Applicant.admissions_cycle).distinct()]
       
-      data = {}
+      data = []
       for year_data in years_data:
         year = year_data["admissions_cycle"]
-        data = {**data, year: query.filter(Applicant.admissions_cycle == year).count()}
+        data.append({"year": year, "count": query.filter(Applicant.admissions_cycle == year).count()})
       
       return data, 200
