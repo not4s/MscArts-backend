@@ -205,7 +205,7 @@ def insert_into_database(df, file_version=0, mock=False):
             if row["Email"]
             else f'{row["First Name"]}.{row["Last Name"]}@{fake.domain_name()}'
         )
-        if not row["Erpid"]:
+        if not row["Erpid"] or pd.isna(row["Erpid"]):
             row["Erpid"] = erpid
             erpid += 1
         # b_date = fake.date_between_dates(date_start=datetime(1980,1,1), date_end=datetime(2005,12,31)).year
@@ -225,7 +225,6 @@ def insert_into_database(df, file_version=0, mock=False):
         # Fetch the latest version saved in db of the given erpid
         # version_parser = VersionParser()
         row["version"] = file_version
-
         new_applicant = applicant_data(row)
         json_new_applicant = applicant_serializer.dump(new_applicant)
         del json_new_applicant["version"]
