@@ -20,12 +20,14 @@ filters = [
     ("combined_fee_status", str),
 ]
 
-live = ['Condition Firm',
-        'Condition Pending',
-        'Uncondition Firm',
-        'Uncondition Firm Temp',
-        'Unconditional Firm Temp',
-        'Uncondition Pending']
+live = [
+    "Condition Firm",
+    "Condition Pending",
+    "Uncondition Firm",
+    "Uncondition Firm Temp",
+    "Unconditional Firm Temp",
+    "Uncondition Pending",
+]
 
 
 @applicant_api.route("/attribute", methods=["GET"])
@@ -53,17 +55,21 @@ class ApplicantApi(Resource):
         query = base_query()
 
         program_type_filter = request.args.get("program_type", default=None, type=str)
-        decision_status_filter = request.args.get("decision_status", default=None, type=str)
+        decision_status_filter = request.args.get(
+            "decision_status", default=None, type=str
+        )
 
         if program_type_filter is not None:
             query = query.join(Program, Applicant.program_code == Program.code)
             query = query.filter(Program.program_type == program_type_filter)
-        
-        if decision_status_filter == 'live':
+
+        if decision_status_filter == "live":
             # live applicants haven't been enrolled yet (they could still come)
-            query = query.filter(Applicant.decision_status.in_(live), Applicant.enrolled.is_(None))
+            query = query.filter(
+                Applicant.decision_status.in_(live), Applicant.enrolled.is_(None)
+            )
             # TODO: cleared/paid/accepted
-        elif decision_status_filter == 'not_live':
+        elif decision_status_filter == "not_live":
             query = query.filter(Applicant.decision_status.notin_(live))
 
         for (col, col_type) in filters:
@@ -88,12 +94,13 @@ class ApplicantApi(Resource):
         if count and series:
             df = pd.DataFrame(data)
             counted = df[[count, series]].value_counts()
+            print(counted)
             reformatted = []
             for key, value in counted.items():
                 if key[0].strip() != "":
                     combined = list(
                         filter(
-                            lambda x: x[count] == "Combined" and x["series"] == key[1],
+                            lambda x: x[count] == "Combined" and x["type"] == key[1],
                             reformatted,
                         )
                     )
@@ -103,8 +110,7 @@ class ApplicantApi(Resource):
                             {
                                 count: "Combined",
                                 "count": int(value) + combined[0]["count"],
-                                "type": key[0],
-                                "series": key[1],
+                                "type": key[1],
                             }
                         )
                     else:
@@ -112,18 +118,17 @@ class ApplicantApi(Resource):
                             {
                                 count: "Combined",
                                 "count": int(value),
-                                "type": key[0],
-                                "series": key[1],
+                                "type": key[1],
                             }
                         )
                     reformatted.append(
                         {
                             count: key[0],
                             "count": int(value),
-                            "type": key[0],
-                            "series": key[1],
+                            "type": key[1],
                         }
                     )
+            reformatted = list(sorted(reformatted, key=lambda x: -x["count"]))
             return reformatted, 200
 
         if count:
