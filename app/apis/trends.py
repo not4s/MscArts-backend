@@ -20,9 +20,13 @@ class TrendsApi(Resource):
     def get(self):
       query = base_query()
 
-      unit = request.args.get("unit", default=float("inf"), type=int)
+      unit = request.args.get("unit", type=int)
       period = request.args.get("period", default="year", type=str)
       
+      if not unit:
+        # return all years data
+        return all_year_data(query), 200
+
       today = date(2022, 7, 31)
 
       data = []
@@ -35,7 +39,17 @@ class TrendsApi(Resource):
       elif period == "day":
         data = split_into_day(unit, today)
       return data, 200
+
+def all_year_data(query):
+  years_data = [applicant_deserializer.dump(d) for d in db.session.query(Applicant.admissions_cycle).distinct()]
       
+  data = []
+  for year_data in years_data:
+    year = year_data["admissions_cycle"]
+    data.append({"year": year, "count": query.filter(Applicant.admissions_cycle == year).count()})
+  
+  return data
+  
 
 def split_into_year(unit, today):
   query = base_query()
