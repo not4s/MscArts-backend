@@ -42,7 +42,8 @@ class TrendsApi(Resource):
         # return all years data
         return all_year_data(query), 200
 
-      today = date(2022, 7, 31)
+      today = date.today()
+      # today = date(2022, 7, 31)
 
       data = []
       if period == "year":
