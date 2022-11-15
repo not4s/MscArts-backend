@@ -102,7 +102,6 @@ def applicant_data(row):
 def generate_df_from_sql(query):
     pass
 
-
 def generate_df_from_db():
     pass
 
@@ -112,16 +111,16 @@ def convert_time(time_str):
         return time_str
 
     if time_str and type(time_str) is str:
-        datetime.strptime(time_str, "%m/%d/%Y").date()
-    else:
-        return None
-
+        return datetime.strptime(time_str, "%m/%d/%Y").date()
+    elif type(time_str) is pd._libs.tslibs.timestamps.Timestamp:
+        return time_str.to_pydatetime()
 
 def insert_erpid(df):
     df["Erpid"] = range(1, df.shape[0] + 1)
 
 def insert_admissions_cycle(df):
     df["Admissions Cycle"] = df["Anticipated Entry Term"].apply(lambda x: str(x).split()[1].split('-')[0])
+    # df["Admissions Cycle"] = pd.to_numeric(df["Admissions Cycle"])
 
 def parse_to_models(df):
     df.dropna(how="all", inplace=True)
@@ -129,9 +128,9 @@ def parse_to_models(df):
 
     # insert empty columns for all columns in our column name map that don't exist in the df
     for col in col_names_map.values():
-        # if col == "Admissions Cycle" and col not in df.columns:
-        #     # insert admissions cycle into the columns
-        #     insert_admissions_cycle(df)
+        if col == "Admissions Cycle" and col not in df.columns:
+            # insert admissions cycle into the columns
+            insert_admissions_cycle(df)
         df[col] = df[col] if col in df.columns else ""
     df["First Name"] = df["First Name"].fillna("")
     df["Last Name"] = df["Last Name"].fillna("")
@@ -178,7 +177,9 @@ def insert_into_database(df, file_version=0, mock=False):
     df["First Name"] = df["First Name"].fillna("")
     df["Last Name"] = df["Last Name"].fillna("")
     df["Email"] = df["Email"].fillna("")
+    df["Admissions Cycle"] = pd.to_numeric(df["Admissions Cycle"])
 
+    insert_erpid(df)
     fake = Faker()
     Faker.seed(137920)
     new_data = []
@@ -194,7 +195,7 @@ def insert_into_database(df, file_version=0, mock=False):
 
     df = df.reindex(df.columns.tolist() + ["version"], axis=1)
 
-    erpid = 1
+    # erpid = 1
 
     for index, row in df.iterrows():
 
@@ -207,9 +208,11 @@ def insert_into_database(df, file_version=0, mock=False):
             if row["Email"]
             else f'{row["First Name"]}.{row["Last Name"]}@{fake.domain_name()}'
         )
-        if not row["Erpid"] or pd.isna(row["Erpid"]):
-            row["Erpid"] = erpid
-            erpid += 1
+        if pd.isna(row["Admissions Cycle"]):
+            row["Admissions Cycle"] = -1
+        # if not row["Erpid"] or pd.isna(row["Erpid"]):
+        #     row["Erpid"] = erpid
+        #     erpid += 1
         # b_date = fake.date_between_dates(date_start=datetime(1980,1,1), date_end=datetime(2005,12,31)).year
 
         program_code = row["Programme Code"]
