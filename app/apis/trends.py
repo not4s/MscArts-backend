@@ -21,12 +21,11 @@ class TrendsApi(Resource):
       query = base_query()
 
       unit = request.args.get("unit", type=int)
-      period = request.args.get("period", default="year", type=str)
+      period = request.args.get("period", default="year", type=str).lower()
       program_code = request.args.get("code", default=None, type=str)
       gender = request.args.get("gender", default=None, type=str)
       fee_status = request.args.get("fee_status", default=None, type=str)
       nationality = request.args.get("nationality", default=None, type=str)
-
       if program_code is not None:
         query = query.filter(Applicant.program_code == program_code)
       
@@ -62,7 +61,7 @@ def all_year_data(query):
   data = []
   for year_data in years_data:
     year = year_data["admissions_cycle"]
-    data.append({"year": year, "count": query.filter(Applicant.admissions_cycle == year).count()})
+    data.append({"period": year, "count": query.filter(Applicant.admissions_cycle == year).count()})
   
   return data
   
@@ -72,7 +71,7 @@ def split_into_year(unit, today, query):
   upper_bound = today
   lower_bound = today - relativedelta(years = 1)
   while unit > 0:
-    data.append({"year": (lower_bound + relativedelta(days = 1)).strftime("%m/%d/%Y"), "count": query.filter(Applicant.submitted > lower_bound, Applicant.submitted <= upper_bound).count()})
+    data.append({"period": (lower_bound + relativedelta(days = 1)).strftime("%m/%d/%Y"), "count": query.filter(Applicant.submitted > lower_bound, Applicant.submitted <= upper_bound).count()})
     upper_bound = lower_bound
     lower_bound = upper_bound - relativedelta(years = 1)
     unit -= 1
@@ -84,7 +83,7 @@ def split_into_month(unit, today, query):
   upper_bound = today
   lower_bound = today - relativedelta(months = 1)
   while unit > 0:
-    data.append({"month": (lower_bound + relativedelta(days = 1)).strftime("%m/%d/%Y"), "count": query.filter(Applicant.submitted > lower_bound, Applicant.submitted <= upper_bound).count()})
+    data.append({"period": (lower_bound + relativedelta(days = 1)).strftime("%m/%d/%Y"), "count": query.filter(Applicant.submitted > lower_bound, Applicant.submitted <= upper_bound).count()})
     upper_bound = lower_bound
     lower_bound = upper_bound - relativedelta(months = 1)
     unit -= 1
@@ -96,7 +95,7 @@ def split_into_week(unit, today, query):
   upper_bound = today
   lower_bound = today - relativedelta(weeks = 1)
   while unit > 0:
-    data.append({"week": (lower_bound + relativedelta(days = 1)).strftime("%m/%d/%Y"), "count": query.filter(Applicant.submitted > lower_bound, Applicant.submitted <= upper_bound).count()})
+    data.append({"period": (lower_bound + relativedelta(days = 1)).strftime("%m/%d/%Y"), "count": query.filter(Applicant.submitted > lower_bound, Applicant.submitted <= upper_bound).count()})
     upper_bound = lower_bound
     lower_bound = upper_bound - relativedelta(weeks = 1)
     unit -= 1
@@ -109,7 +108,7 @@ def split_into_day(unit, today, query):
   while unit > 0:
     count = query.filter(Applicant.submitted == date).count()
     print(date, count)
-    data.append({"day": date.strftime("%m/%d/%Y"), "count": count})
+    data.append({"period": date.strftime("%m/%d/%Y"), "count": count})
     date = date - relativedelta(days = 1)
     unit -= 1
 
