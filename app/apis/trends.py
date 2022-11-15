@@ -22,6 +22,22 @@ class TrendsApi(Resource):
 
       unit = request.args.get("unit", type=int)
       period = request.args.get("period", default="year", type=str)
+      program_code = request.args.get("code", default=None, type=str)
+      gender = request.args.get("gender", default=None, type=str)
+      fee_status = request.args.get("fee_status", default=None, type=str)
+      nationality = request.args.get("nationality", default=None, type=str)
+
+      if program_code is not None:
+        query = query.filter(Applicant.program_code == program_code)
+      
+      if gender is not None:
+        query = query.filter(Applicant.gender == gender)
+
+      if fee_status is not None:
+        query = query.filter(Applicant.combined_fee_status == fee_status)
+
+      if nationality is not None:
+        query = query.filter(Applicant.nationality == nationality)
       
       if not unit:
         # return all years data
@@ -31,13 +47,13 @@ class TrendsApi(Resource):
 
       data = []
       if period == "year":
-        data = split_into_year(unit, today)
+        data = split_into_year(unit, today, query)
       elif period == "month":
-        data = split_into_month(unit, today)
+        data = split_into_month(unit, today, query)
       elif period == "week":
-        data = split_into_week(unit, today)
+        data = split_into_week(unit, today, query)
       elif period == "day":
-        data = split_into_day(unit, today)
+        data = split_into_day(unit, today, query)
       return data, 200
 
 def all_year_data(query):
@@ -51,8 +67,7 @@ def all_year_data(query):
   return data
   
 
-def split_into_year(unit, today):
-  query = base_query()
+def split_into_year(unit, today, query):
   data = []
   upper_bound = today
   lower_bound = today - relativedelta(years = 1)
@@ -64,9 +79,8 @@ def split_into_year(unit, today):
 
   return data
 
-def split_into_month(unit, today):
+def split_into_month(unit, today, query):
   data = []
-  query = base_query()
   upper_bound = today
   lower_bound = today - relativedelta(months = 1)
   while unit > 0:
@@ -77,9 +91,8 @@ def split_into_month(unit, today):
 
   return data
 
-def split_into_week(unit, today):
+def split_into_week(unit, today, query):
   data = []
-  query = base_query()
   upper_bound = today
   lower_bound = today - relativedelta(weeks = 1)
   while unit > 0:
@@ -90,9 +103,8 @@ def split_into_week(unit, today):
 
   return data
 
-def split_into_day(unit, today):
+def split_into_day(unit, today, query):
   data = []
-  query = base_query()
   date = today
   while unit > 0:
     count = query.filter(Applicant.submitted == date).count()
