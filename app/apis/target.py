@@ -12,15 +12,18 @@ target_deserializer = TargetSchema()
 
 applicant_deserializer = ApplicantSchema()
 
-live = ['Condition Firm',
-        'Condition Pending',
-        'Uncondition Firm',
-        'Uncondition Firm Temp',
-        'Unconditional Firm Temp',
-        'Uncondition Pending']
+live = [
+    "Condition Firm",
+    "Condition Pending",
+    "Uncondition Firm",
+    "Uncondition Firm Temp",
+    "Unconditional Firm Temp",
+    "Uncondition Pending",
+]
 
-@target_api.route("/", methods=["GET", "POST", "PUT", "DELETE"])
-class ApplicantApi(Resource):
+
+@target_api.route("/progress", methods=["GET"])
+class TargetProgressApi(Resource):
     def get(self):
         program_type = request.args.get("type", default=None, type=str)
         year = request.args.get("year", default=None, type=str)
@@ -35,12 +38,31 @@ class ApplicantApi(Resource):
         for i, target in enumerate(data):
             query = base_query()
             query = query.join(Program, Applicant.program_code == Program.code)
-            query = query.filter(Program.program_type == target['program_type'], 
-                                 Applicant.admissions_cycle == target['year'],
-                                 Applicant.decision_status.in_(live))
+            query = query.filter(
+                Program.program_type == target["program_type"],
+                Applicant.admissions_cycle == target["year"],
+                Applicant.decision_status.in_(live),
+            )
             data[i] = {**target, "progress": query.count()}
 
         return data, 200
+
+
+@target_api.route("/", methods=["GET", "POST", "PUT", "DELETE"])
+class TargetApi(Resource):
+    def get(self):
+        program_type = request.args.get("program_type", default=None, type=str)
+        year = request.args.get("year", default=None, type=str)
+
+        query = Target.query
+
+        if program_type is not None:
+            query = query.filter_by(program_type=program_type)
+
+        if year is not None:
+            query = query.filter_by(year=year)
+
+        return [target_deserializer.dump(d) for d in query.all()], 200
 
     def post(self):
         if not request.is_json:
@@ -50,15 +72,22 @@ class ApplicantApi(Resource):
 
         program_type = body.get("program_type", None)
         year = body.get("year", None)
+        fee_status = body.get("fee_status", None)
         target = body.get("target", None)
 
-        if program_type is None or year is None or target is None:
+        if program_type is None or year is None or fee_status is None or target is None:
             return {"message": "Malformed Request"}, 400
 
         program_type = program_type.strip()
+        fee_status = fee_status.strip()
 
         try:
-            new_target = Target(program_type=program_type, year=year, target=target)
+            new_target = Target(
+                program_type=program_type,
+                year=year,
+                fee_status=fee_status,
+                target=target,
+            )
             db.session.add(new_target)
             db.session.commit()
         except:
@@ -81,14 +110,23 @@ class ApplicantApi(Resource):
 
         program_type = body.get("program_type", None)
         year = body.get("year", None)
+        fee_status = body.get("fee_status", None)
         target_num = body.get("target", None)
 
-        if program_type is None or year is None or target_num is None:
+        if (
+            program_type is None
+            or year is None
+            or target_num is None
+            or fee_status is None
+        ):
             return {"message": "Malformed Request"}, 400
 
         program_type = program_type.strip()
+        fee_status = fee_status.strip()
 
-        target = Target.query.filter_by(program_type=program_type, year=year).first()
+        target = Target.query.filter_by(
+            program_type=program_type, fee_status=fee_status, year=year
+        ).first()
 
         if target is None:
             return {"message": "No program with the specified code"}, 400
@@ -107,13 +145,16 @@ class ApplicantApi(Resource):
 
         program_type = body.get("program_type", None)
         year = body.get("year", None)
-        
-        if program_type is None or year is None:
+        fee_status = body.get("fee_status", None)
+
+        if program_type is None or year is None or fee_status is None:
             return {"message": "Malformed Request"}, 400
 
         program_type = program_type.strip()
         try:
-            Target.query.filter_by(program_type=program_type,year=year).delete()
+            Target.query.filter_by(
+                program_type=program_type, year=year, fee_status=fee_status
+            ).delete()
             db.session.commit()
             return {"message": "Deleted"}, 200
         except Exception as e:
