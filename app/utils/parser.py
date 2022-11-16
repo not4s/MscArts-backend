@@ -161,44 +161,73 @@ def parse_to_models(df):
         new_data.append(applicant_serializer.dump(new_applicant))
     return new_data
 
-
-# inserts values in the given dataframe to the database
-def insert_into_database(df, file_version=0, mock=False):
-    # drop not needed columns and empty rows
+def drop_empty_rows(df):
     df.drop(labels=(set(drop_columns) & set(df.columns)), axis=1, inplace=True)
     df.dropna(how="all", inplace=True)
     df.reset_index(drop=True, inplace=True)
-    # insert empty columns for all columns in our column name map that don't exist in the df
+
+def fill_null_values(df):
+    # TODO: check if can fill with faker function
+    fake = Faker()
+    Faker.seed(137920)
+    # df["First Name"] = df["First Name"].replace("", None)
+    # df["Last Name"] = df["First Name"].replace("", None)
+    # df["Email Name"] = df["First Name"].replace("", None)
+
+    df["First Name"] = df["First Name"].fillna(fake.first_name())
+    df["Last Name"] = df["Last Name"].fillna(fake.last_name())
+    df["Email"] = df["Email"].fillna(f'{df["First Name"]}.{df["Last Name"]}@{fake.domain_name()}')
+    df["Admissions Cycle"] = df["Admissions Cycle"].fillna(-1)
+
+def add_columns(df, file_version):
     for col in col_names_map.values():
         if col == "Admissions Cycle" and col not in df.columns:
             # insert admissions cycle into the columns
             insert_admissions_cycle(df)
         df[col] = df[col] if col in df.columns else ""
-    df["First Name"] = df["First Name"].fillna("")
-    df["Last Name"] = df["Last Name"].fillna("")
-    df["Email"] = df["Email"].fillna("")
-    df["Admissions Cycle"] = pd.to_numeric(df["Admissions Cycle"])
+    df["version"] = file_version
 
+def insert_missing_program_codes(df):
+    new_program_code = []
+    program_codes = list(map(lambda x: x.code, Program.query.all()))
+    for name, group in df:
+        program_code = name[0]
+        program_name = name[1]
+        academic_level = name[2]
+        if program_code and program_code not in program_codes:
+            print("Inserting program code", program_code)
+            new_program_code.append(
+                Program(
+                    code=program_code,
+                    name=program_name,
+                    academic_level=academic_level,
+                    active=False,
+                )
+            )
+            program_codes.append(program_code)
+    db.session.add_all(new_program_code)
+    db.session.commit()
+
+def format_rows(df, file_version):
+    drop_empty_rows(df)
+    add_columns(df, file_version)
+    fill_null_values(df)
     insert_erpid(df)
+    insert_missing_program_codes(df.groupby(["Programme Code", "Academic Program", "Type"]))
+
+# inserts values in the given dataframe to the database
+def insert_into_database(df, file_version=0, mock=False):
+    format_rows(df, file_version)
     fake = Faker()
     Faker.seed(137920)
     new_data = []
-    new_program_code = []
-
-    program_codes = list(map(lambda x: x.code, Program.query.all()))
-    # database_df = generate_df_from_db()
     applicant_serializer = ApplicantSchema()
     database_data = [applicant_serializer.dump(d) for d in Applicant.query.all()]
 
     for d in database_data:
         del d["version"]
 
-    df = df.reindex(df.columns.tolist() + ["version"], axis=1)
-
-    # erpid = 1
-
     for index, row in df.iterrows():
-
         row["First Name"] = (
             row["First Name"] if row["First Name"] else fake.first_name()
         )
@@ -208,36 +237,12 @@ def insert_into_database(df, file_version=0, mock=False):
             if row["Email"]
             else f'{row["First Name"]}.{row["Last Name"]}@{fake.domain_name()}'
         )
-        if pd.isna(row["Admissions Cycle"]):
-            row["Admissions Cycle"] = -1
-        # if not row["Erpid"] or pd.isna(row["Erpid"]):
-        #     row["Erpid"] = erpid
-        #     erpid += 1
-        # b_date = fake.date_between_dates(date_start=datetime(1980,1,1), date_end=datetime(2005,12,31)).year
-
-        program_code = row["Programme Code"]
-        if program_code and program_code not in program_codes:
-            new_program_code.append(
-                Program(
-                    code=program_code,
-                    name=row["Academic Program"],
-                    academic_level=row["Type"],
-                    active=False,
-                )
-            )
-            program_codes.append(program_code)
-
-        # Fetch the latest version saved in db of the given erpid
-        # version_parser = VersionParser()
-        row["version"] = file_version
         new_applicant = applicant_data(row)
         json_new_applicant = applicant_serializer.dump(new_applicant)
         del json_new_applicant["version"]
         if json_new_applicant not in database_data:
             new_data.append(new_applicant)
 
-    db.session.add_all(new_program_code)
-    db.session.commit()
     db.session.add_all(new_data)
     db.session.commit()
 
