@@ -29,6 +29,41 @@ live = [
     "Uncondition Pending",
 ]
 
+ETHNICITY_MAP = {
+    "Arab": "Arab",
+    "Asian - Bangladeshi": "Asian",
+    "Asian - Chinese": "Chinese",
+    "Asian - Indian": "Indian",
+    "Asian - Other": "Asian",
+    "Asian - Pakistani": "Asian",
+    "Asian or Asian British - Bangladeshi": "Asian",
+    "Asian or Asian British - Indian": "Indian",
+    "Asian or Asian British - Pakistani": "Asian",
+    "Black - African": "Black",
+    "Black - Caribbean": "Black",
+    "Black - Other": "Black",
+    "Black or Black British - African": "Black",
+    "Black or Black British - Caribbean": "Black",
+    "Chinese": "Chinese",
+    "Gypsy or Traveller": "Other/Unknown",
+    "Mixed - Other": "Other/Unknown",
+    "Mixed - White and Asian": "Asian",
+    "Mixed - White and Black African": "Black",
+    "Mixed - White and Black Caribbean": "Black",
+    "Not known": "Other/Unknown",
+    "Other": "Other/Unknown",
+    "Other/Unknown": "Other/Unknown",
+    "Other Asian background": "Asian",
+    "Other Black background": "Black",
+    "Other Mixed background": "Other/Unknown",
+    "Other White background": "White",
+    "Other ethnic background": "Other/Unknown",
+    "Prefer not to say": "Other/Unknown",
+    "Unknown": "Other/Unknown",
+    "White": "White",
+    "White - British": "White",
+}
+
 
 @applicant_api.route("/attribute", methods=["GET"])
 class ApplicantAttributeApi(Resource):

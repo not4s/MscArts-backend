@@ -21,7 +21,9 @@ class Applicant(db.Model):
         ForeignKey("file_control.version"),
         primary_key=True,
     )
-    program_code = db.Column(db.String(10), ForeignKey("program.code"), primary_key=True)
+    program_code = db.Column(
+        db.String(10), ForeignKey("program.code"), primary_key=True
+    )
     anticipated_entry_term = db.Column(db.String(30))
     admissions_cycle = db.Column(db.Integer)
     erpid = db.Column(db.Integer, primary_key=True)
@@ -64,4 +66,5 @@ class Target(db.Model):
         autoincrement=False,
     )
     year = db.Column(db.String(10), primary_key=True, autoincrement=False)
+    fee_status = db.Column(db.String, primary_key=True, autoincrement=False)
     target = db.Column(db.Integer)
