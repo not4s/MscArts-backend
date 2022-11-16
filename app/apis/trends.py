@@ -43,17 +43,27 @@ class TrendsApi(Resource):
         return all_year_data(query), 200
 
       today = date.today()
-      # today = date(2022, 7, 31)
 
+      if period == "year":
+        old_date = today - relativedelta(years = unit)
+      elif period == "month":
+        old_date = today - relativedelta(months = unit)
+      elif period == "week":
+        old_date = today - relativedelta(weeks = unit)
+      elif period == "day":
+        old_date = today - relativedelta(days = unit)
+
+      data_since_old_date = [applicant_deserializer.dump(d)["submitted"] for d in query.filter(Applicant.submitted > old_date)]
+      data_since_old_date = list(map(lambda x : datetime.strptime(x, "%Y-%m-%d").date(), data_since_old_date))
       data = []
       if period == "year":
-        data = split_into_year(unit, today, query)
+        data = split_into_year(unit, today, data_since_old_date)
       elif period == "month":
-        data = split_into_month(unit, today, query)
+        data = split_into_month(unit, today, data_since_old_date)
       elif period == "week":
-        data = split_into_week(unit, today, query)
+        data = split_into_week(unit, today, data_since_old_date)
       elif period == "day":
-        data = split_into_day(unit, today, query)
+        data = split_into_day(unit, today, data_since_old_date)
       return data, 200
 
 def all_year_data(query):
@@ -67,49 +77,51 @@ def all_year_data(query):
   return data
   
 
-def split_into_year(unit, today, query):
+def split_into_year(unit, today, data_since_old_date):
   data = []
   upper_bound = today
   lower_bound = today - relativedelta(years = 1)
   while unit > 0:
-    data.append({"period": (lower_bound + relativedelta(days = 1)).strftime("%m/%d/%Y"), "count": query.filter(Applicant.submitted > lower_bound, Applicant.submitted <= upper_bound).count()})
+    data.append({"period": (lower_bound + relativedelta(days = 1)).strftime("%m/%d/%Y"), 
+    "count": len([x for x in data_since_old_date if x > lower_bound and x <= upper_bound])})
     upper_bound = lower_bound
     lower_bound = upper_bound - relativedelta(years = 1)
     unit -= 1
 
   return data
 
-def split_into_month(unit, today, query):
+def split_into_month(unit, today, data_since_old_date):
   data = []
   upper_bound = today
   lower_bound = today - relativedelta(months = 1)
   while unit > 0:
-    data.append({"period": (lower_bound + relativedelta(days = 1)).strftime("%m/%d/%Y"), "count": query.filter(Applicant.submitted > lower_bound, Applicant.submitted <= upper_bound).count()})
+    data.append({"period": (lower_bound + relativedelta(days = 1)).strftime("%m/%d/%Y"), 
+    "count": len([x for x in data_since_old_date if x > lower_bound and x <= upper_bound])})
     upper_bound = lower_bound
     lower_bound = upper_bound - relativedelta(months = 1)
     unit -= 1
 
   return data
 
-def split_into_week(unit, today, query):
+def split_into_week(unit, today, data_since_old_date):
   data = []
   upper_bound = today
   lower_bound = today - relativedelta(weeks = 1)
   while unit > 0:
-    data.append({"period": (lower_bound + relativedelta(days = 1)).strftime("%m/%d/%Y"), "count": query.filter(Applicant.submitted > lower_bound, Applicant.submitted <= upper_bound).count()})
+    data.append({"period": (lower_bound + relativedelta(days = 1)).strftime("%m/%d/%Y"), 
+    "count": len([x for x in data_since_old_date if x > lower_bound and x <= upper_bound])})
     upper_bound = lower_bound
     lower_bound = upper_bound - relativedelta(weeks = 1)
     unit -= 1
 
   return data
 
-def split_into_day(unit, today, query):
+def split_into_day(unit, today, data_since_old_date):
   data = []
   date = today
   while unit > 0:
-    count = query.filter(Applicant.submitted == date).count()
-    print(date, count)
-    data.append({"period": date.strftime("%m/%d/%Y"), "count": count})
+    data.append({"period": date.strftime("%m/%d/%Y"), 
+    "count": len([x for x in data_since_old_date if x == date])})
     date = date - relativedelta(days = 1)
     unit -= 1
 
