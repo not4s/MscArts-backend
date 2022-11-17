@@ -94,8 +94,10 @@ class ApplicantApi(Resource):
             "decision_status", default=None, type=str
         )
 
+        query = query.join(Program, Applicant.program_code == Program.code)
+        query = query.filter(Program.active == True)
+
         if program_type_filter is not None:
-            query = query.join(Program, Applicant.program_code == Program.code)
             query = query.filter(Program.program_type == program_type_filter)
 
         if decision_status_filter == "live":
