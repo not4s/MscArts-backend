@@ -7,7 +7,6 @@ from flask import request
 from flask_restx import Resource
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
-from itertools import groupby
 import pandas as pd
 
 trends_api = api.namespace("api/trends", description="Trends API")
