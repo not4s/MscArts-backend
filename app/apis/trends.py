@@ -108,7 +108,7 @@ def split_into_year(unit, today, data_since_old_date, series):
 
   return data
 
-def split_into_month(unit, today, data_since_old_date):
+def split_into_month(unit, today, data_since_old_date, series):
   data = []
   upper_bound = today
   lower_bound = today - relativedelta(months = 1)
@@ -123,7 +123,7 @@ def split_into_month(unit, today, data_since_old_date):
 
   return data
 
-def split_into_week(unit, today, data_since_old_date):
+def split_into_week(unit, today, data_since_old_date, series):
   data = []
   upper_bound = today
   lower_bound = today - relativedelta(weeks = 1)
@@ -138,7 +138,7 @@ def split_into_week(unit, today, data_since_old_date):
 
   return data
 
-def split_into_day(unit, today, data_since_old_date):
+def split_into_day(unit, today, data_since_old_date, series):
   data = []
   date = today
   while unit > 0:
