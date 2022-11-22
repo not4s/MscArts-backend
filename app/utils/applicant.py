@@ -1,6 +1,7 @@
 from app import db
 from app.models.applicant import Applicant, Program
 from app.schemas.applicant import ApplicantSchema
+from app.utils.mock_cache import mock_cache
 from sqlalchemy.sql import func, and_
 
 applicant_deserializer = ApplicantSchema()
@@ -39,7 +40,13 @@ def base_query():
 
 # Filter down query and fetch applicants with the corresponding
 # program_type and decision_status
-def fetch_applicants(program_type, decision_status, custom_decision=None):
+def fetch_applicants(
+    program_type, decision_status, custom_decision=None, username=None
+):
+
+    if username is not None:
+        return mock_cache.get(username)
+
     query = base_query()
 
     query = query.join(Program, Applicant.program_code == Program.code)

@@ -5,6 +5,7 @@ from app.schemas.applicant import ApplicantSchema
 from app.apis.user import read_access_required
 from app.utils.applicant import base_query, fetch_applicants
 from app.utils.graph import applicants_to_bar, applicants_to_pie
+from flask_jwt_extended import get_jwt
 from flask import request, abort
 from flask_restx import Resource
 import pandas as pd
@@ -149,9 +150,15 @@ class ApplicantApi(Resource):
             "decision_status", default="", type=str
         )
         custom_decision = request.args.get("custom_decision", default=None, type=str)
+        mock = request.args.get("mock", default=None)
+
+        username = None
+
+        if mock is not None:
+            username = get_jwt()["sub"]["username"]
 
         data = fetch_applicants(
-            program_type_filter, decision_status_filter, custom_decision
+            program_type_filter, decision_status_filter, custom_decision, username
         )
 
         if len(data) == 0:

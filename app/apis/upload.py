@@ -12,6 +12,8 @@ from app.models.applicant import Applicant, Program
 from app.schemas.applicant import ProgramSchema
 from app.models.files import FileControl
 from app.schemas.files import FileControlSchema
+from app.utils.mock_cache import mock_cache
+from flask_jwt_extended import get_jwt
 
 
 upload_api = api.namespace("api/upload", description="Test API")
@@ -35,6 +37,8 @@ class MockUploadApi(Resource):
 
         file = request.files["file"]
 
+        username = get_jwt()["sub"]["username"]
+
         if file.filename == "":
             abort(406, description="No File found")
 
@@ -45,15 +49,18 @@ class MockUploadApi(Resource):
         progs = [
             {"code": d.code, "program_type": d.program_type}
             for d in Program.query.all()
+            if d.active
         ]
-        print(progs)
+
         for d in data:
             prog_type = list(filter(lambda x: x["code"] == d["program_code"], progs))
             d["program_type"] = (
                 prog_type[0]["program_type"] if len(prog_type) == 1 else None
             )
 
-        return data, 200
+        mock_cache.put(username, data)
+
+        return {"message": "File Successfully Uploaded"}, 200
 
 
 @upload_api.route("/", methods=["GET", "POST", "DELETE"])
