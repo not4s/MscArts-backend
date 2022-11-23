@@ -23,10 +23,7 @@ class DevConfig(BaseConfig):
 
 class StagingConfig(BaseConfig):
     # LDAP Service =============================================
-    LDAP_TYPE = os.environ.get("DUMMY_LDAP", None)
-    LDAP_SERVICE = (
-        ldap_handler.LDAP if LDAP_TYPE is None else fake_ldap_handler.FAKE_LDAP
-    )
+    LDAP_SERVICE = fake_ldap_handler.FAKE_LDAP
 
     # Database ===================================================
     STAGING_DB_HOST = os.environ.get("STAGING_DB_HOST", None)
@@ -43,3 +40,7 @@ class StagingConfig(BaseConfig):
         SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{STAGING_DB_USER}:{STAGING_DB_PASSWORD}@{STAGING_DB_HOST}:5432/{STAGING_DB}"
     else:
         SQLALCHEMY_DATABASE_URI = "sqlite:///staging.db"
+
+
+class ProductionConfig(BaseConfig):
+    LDAP_SERVICE = ldap_handler.LDAP
