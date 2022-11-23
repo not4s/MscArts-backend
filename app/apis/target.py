@@ -22,7 +22,7 @@ live = [
 ]
 
 
-@target_api.route("/progress", methods=["GET"])
+@target_api.route("/progress/", methods=["GET"])
 class TargetProgressApi(Resource):
     def get(self):
         program_type = request.args.get("type", default=None, type=str)

@@ -28,7 +28,7 @@ def validate_file(file):
     return True
 
 
-@upload_api.route("/mock", methods=["POST"])
+@upload_api.route("/mock/", methods=["POST"])
 class MockUploadApi(Resource):
     @write_access_required
     def post(self):

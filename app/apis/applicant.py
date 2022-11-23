@@ -23,7 +23,7 @@ filters = [
 ]
 
 
-@applicant_api.route("/attribute", methods=["GET"])
+@applicant_api.route("/attribute/", methods=["GET"])
 class ApplicantAttributeApi(Resource):
     def get(self):
 

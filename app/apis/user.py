@@ -101,7 +101,7 @@ def read_access_required(fn):
     return wrapper
 
 
-@user_api.route("/login", methods=["POST"])
+@user_api.route("/login/", methods=["POST"])
 class UserLogin(Resource):
     def post(self):
         if not request.is_json:
@@ -150,7 +150,7 @@ class UserLogin(Resource):
         return response
 
 
-@user_api.route("/roles", methods=["GET", "DELETE", "PUT"])
+@user_api.route("/roles/", methods=["GET", "DELETE", "PUT"])
 class UserRoles(Resource):
     @jwt_required()
     def get(self):
@@ -200,7 +200,8 @@ class UserRoles(Resource):
         db.session.commit()
         return {"message": "Successfully updated user access"}, 200
 
-@user_api.route("/access", methods=["GET"])
+
+@user_api.route("/access/", methods=["GET"])
 class UserRoleTable(Resource):
     @admin_required
     def get(self):
