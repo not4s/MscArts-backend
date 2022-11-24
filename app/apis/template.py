@@ -21,7 +21,7 @@ class TemplateTabAPI(Resource):
 
         template = TemplateTab.query.filter_by(id=template_id).first()
 
-        return {"base64JSON": template.base64JSON}, 200
+        return {"base64JSON": template.base64JSON, "title": template.title}, 200
 
     @read_access_required
     def post(self):
