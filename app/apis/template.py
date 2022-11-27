@@ -68,7 +68,7 @@ class DefaultTemplateAPI(Resource):
 
         uid = body.get("uid", None)
 
-        if uid is None or title is None:
+        if uid is None:
             return {"message": "Malformed Request"}, 400
 
         try:
