@@ -41,9 +41,8 @@ def base_query():
 # Filter down query and fetch applicants with the corresponding
 # program_type and decision_status
 def fetch_applicants(
-    program_type, decision_status, custom_decision=None, username=None
+    program_type, decision_status, custom_decision=None, year=None, username=None
 ):
-
     if username is not None:
         return mock_cache.get(username)
 
@@ -51,6 +50,9 @@ def fetch_applicants(
 
     query = query.join(Program, Applicant.program_code == Program.code)
     query = query.filter(Program.active == True)
+
+    if year is not None:
+        query = query.filter(Applicant.admissions_cycle == year)
 
     if program_type is not None and program_type != "ALL":
         query = query.filter(Program.program_type == program_type)

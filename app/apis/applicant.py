@@ -141,6 +141,7 @@ class ApplicantApi(Resource):
     def get(self):
         graph_type = request.args.get("type", default=None, type=str)
         primary_type = request.args.get("primary", default=None, type=str)
+        year = request.args.get("year", default=None, type=int)
 
         if graph_type is None or primary_type is None:
             return {"message": "Malformed Request"}, 400
@@ -158,7 +159,7 @@ class ApplicantApi(Resource):
             username = get_jwt()["sub"]["username"]
 
         data = fetch_applicants(
-            program_type_filter, decision_status_filter, custom_decision, username
+            program_type_filter, decision_status_filter, custom_decision, year, username
         )
 
         if len(data) == 0:
