@@ -50,187 +50,182 @@ col_names_map = {
 drop_columns = ["(Do Not Modify) Application Folder", "(Do Not Modify) Row Checksum", "(Do Not Modify) Modified On"]
 
 
-class Parser:
-    def __init__(self, mapping=col_names_map):
-        self.mapping = mapping
-
-    def csv_to_df(self, filename, is_csv):
-        if is_csv:
-            df = pd.read_csv(filename)
-            return df.rename(columns=col_names_map)
-        else:
-            df = pd.read_excel(filename)
-            return df.rename(columns=col_names_map)
+def csv_to_df(filename, is_csv):
+    if is_csv:
+        df = pd.read_csv(filename)
+        return df.rename(columns=col_names_map)
+    else:
+        df = pd.read_excel(filename)
+        return df.rename(columns=col_names_map)
 
 
-    def applicant_data(self, row):
-        return Applicant(
-            version=row["version"],
-            anticipated_entry_term=row["Anticipated Entry Term"],
-            admissions_cycle=row["Admissions Cycle"],
-            erpid=row["Erpid"],
-            prefix=row["Prefix"],
-            first_name=row["First Name"],
-            last_name=row["Last Name"],
-            gender=row["Gender"],
-            birth_date=self.convert_time(row["Birth Date"]),
-            nationality=row["Primary Nationality"],
-            ethnicity=row["Ethnicity"],
-            disability=row["Disability Type"],
-            country_of_residency=row["Country of Residency"],
-            email=row["Email"],
-            application_folder_fee_status=row["Application Folder Fee Status"],
-            combined_fee_status=row["Combined Fee Status"],
-            program_code=row["Programme Code"],
-            application_status=row["Application Status"],
-            supplemental_complete="Yes" == row["Supplemental Items Complete"],
-            academic_eligibility=row["Academic Eligibility"],
-            folder_status=row["Folder Status"],
-            date_to_department=self.convert_time(row["Date Sent to Department"]),
-            department_status=row["Department Processing Status"],
-            special_case_status=row["Special Case Status"],
-            proposed_decision=row["Proposed Decision"],
-            decision_status=row["Decision Status"],
-            status=row["Status"],
-            status_reason=row["Status Reason"],
-            submitted=self.convert_time(row["Submitted Date"]),
-            withdrawn=self.convert_time(row["Withdrawn Date"]),
-            admitted=self.convert_time(row["Admitted Date"]),
-            deferred=self.convert_time(row["Deferred Date"]),
-            enrolled=self.convert_time(row["Enrolled Date"]),
-            marked_complete=self.convert_time(row["Marked Complete Date"]),
-        )
+def applicant_data(row):
+    return Applicant(
+        version=row["version"],
+        anticipated_entry_term=row["Anticipated Entry Term"],
+        admissions_cycle=row["Admissions Cycle"],
+        erpid=row["Erpid"],
+        prefix=row["Prefix"],
+        first_name=row["First Name"],
+        last_name=row["Last Name"],
+        gender=row["Gender"],
+        birth_date=self.convert_time(row["Birth Date"]),
+        nationality=row["Primary Nationality"],
+        ethnicity=row["Ethnicity"],
+        disability=row["Disability Type"],
+        country_of_residency=row["Country of Residency"],
+        email=row["Email"],
+        application_folder_fee_status=row["Application Folder Fee Status"],
+        combined_fee_status=row["Combined Fee Status"],
+        program_code=row["Programme Code"],
+        application_status=row["Application Status"],
+        supplemental_complete="Yes" == row["Supplemental Items Complete"],
+        academic_eligibility=row["Academic Eligibility"],
+        folder_status=row["Folder Status"],
+        date_to_department=convert_time(row["Date Sent to Department"]),
+        department_status=row["Department Processing Status"],
+        special_case_status=row["Special Case Status"],
+        proposed_decision=row["Proposed Decision"],
+        decision_status=row["Decision Status"],
+        status=row["Status"],
+        status_reason=row["Status Reason"],
+        submitted=convert_time(row["Submitted Date"]),
+        withdrawn=convert_time(row["Withdrawn Date"]),
+        admitted=convert_time(row["Admitted Date"]),
+        deferred=convert_time(row["Deferred Date"]),
+        enrolled=convert_time(row["Enrolled Date"]),
+        marked_complete=convert_time(row["Marked Complete Date"]),
+    )
 
-    def convert_time(self, time_str):
-        if type(time_str) is datetime:
-            return time_str
+def convert_time(time_str):
+    if type(time_str) is datetime:
+        return time_str
 
-        if time_str and type(time_str) is str:
-            return datetime.strptime(time_str, "%m/%d/%Y").date()
-        elif type(time_str) is pd._libs.tslibs.timestamps.Timestamp:
-            return time_str.to_pydatetime()
+    if time_str and type(time_str) is str:
+        return datetime.strptime(time_str, "%m/%d/%Y").date()
+    elif type(time_str) is pd._libs.tslibs.timestamps.Timestamp:
+        return time_str.to_pydatetime()
 
-    def insert_erpid(self, df):
-        df["Erpid"] = range(1, df.shape[0] + 1)
+def insert_erpid(df):
+    df["Erpid"] = range(1, df.shape[0] + 1)
 
-    def insert_admissions_cycle(self, df):
-        df["Admissions Cycle"] = df["Anticipated Entry Term"].apply(lambda x: str(x).split()[1].split('-')[0])
-        # df["Admissions Cycle"] = pd.to_numeric(df["Admissions Cycle"])
-    
-    def drop_empty_rows(self, df):
-        df.drop(labels=(set(drop_columns) & set(df.columns)), axis=1, inplace=True)
-        df.dropna(how="all", inplace=True)
-        df.reset_index(drop=True, inplace=True)
+def insert_admissions_cycle(self, df):
+    df["Admissions Cycle"] = df["Anticipated Entry Term"].apply(lambda x: str(x).split()[1].split('-')[0])
+    # df["Admissions Cycle"] = pd.to_numeric(df["Admissions Cycle"])
 
-    def fill_null_values(self, df):
-        fake = Faker()
-        Faker.seed(137920)
-        df["First Name"] = df.apply(
-            lambda row: fake.first_name() if row["First Name"] == "" or row["First Name"] is None else row["First Name"],
-            axis=1
-        )
-        df["Last Name"] = df.apply(
-            lambda row: fake.last_name() if row["Last Name"] == "" or row["Last Name"] is None else row["Last Name"],
-            axis=1
-        )
-        df["Email"] = df.apply(
-            lambda row: f'{row["First Name"]}.{row["Last Name"]}@{fake.domain_name()}' if 
-            row["First Name"] == "" or row["Email"] is None else row["Email"],
-            axis=1
-        )
-        df["Admissions Cycle"] = df["Admissions Cycle"].fillna(-1)
+def drop_empty_rows(df):
+    df.drop(labels=(set(drop_columns) & set(df.columns)), axis=1, inplace=True)
+    df.dropna(how="all", inplace=True)
+    df.reset_index(drop=True, inplace=True)
 
-    def add_columns(self, df, file_version):
-        for col in col_names_map.values():
-            if col == "Admissions Cycle" and col not in df.columns:
-                # insert admissions cycle into the columns
-                self.insert_admissions_cycle(df)
-            df[col] = df[col] if col in df.columns else ""
-        df["version"] = file_version
+def fill_null_values(df):
+    fake = Faker()
+    Faker.seed(137920)
+    df["First Name"] = df.apply(
+        lambda row: fake.first_name() if row["First Name"] == "" or row["First Name"] is None else row["First Name"],
+        axis=1
+    )
+    df["Last Name"] = df.apply(
+        lambda row: fake.last_name() if row["Last Name"] == "" or row["Last Name"] is None else row["Last Name"],
+        axis=1
+    )
+    df["Email"] = df.apply(
+        lambda row: f'{row["First Name"]}.{row["Last Name"]}@{fake.domain_name()}' if 
+        row["First Name"] == "" or row["Email"] is None else row["Email"],
+        axis=1
+    )
+    df["Admissions Cycle"] = df["Admissions Cycle"].fillna(-1)
 
-    def insert_missing_program_codes(self, df):
-        new_program_code = []
-        program_codes = list(map(lambda x: x.code, Program.query.all()))
-        for name, group in df:
-            program_code = name[0]
-            program_name = name[1]
-            academic_level = name[2]
-            if program_code and program_code not in program_codes:
-                new_program_code.append(
-                    Program(
-                        code=program_code,
-                        name=program_name,
-                        academic_level=academic_level,
-                        active=False,
-                    )
+def add_columns(df, file_version):
+    for col in col_names_map.values():
+        if col == "Admissions Cycle" and col not in df.columns:
+            # insert admissions cycle into the columns
+            insert_admissions_cycle(df)
+        df[col] = df[col] if col in df.columns else ""
+    df["version"] = file_version
+
+def insert_missing_program_codes(df):
+    new_program_code = []
+    program_codes = list(map(lambda x: x.code, Program.query.all()))
+    for name, group in df:
+        program_code = name[0]
+        program_name = name[1]
+        academic_level = name[2]
+        if program_code and program_code not in program_codes:
+            new_program_code.append(
+                Program(
+                    code=program_code,
+                    name=program_name,
+                    academic_level=academic_level,
+                    active=False,
                 )
-                program_codes.append(program_code)
-        db.session.add_all(new_program_code)
-        db.session.commit()
-
-    def format_rows(self, df, file_version):
-        self.drop_empty_rows(df)
-        self.add_columns(df, file_version)
-        self.fill_null_values(df)
-        self.insert_erpid(df)
-        self.insert_missing_program_codes(df.groupby(["Programme Code", "Academic Program", "Type"]))
-
-    # inserts values in the given dataframe to the database
-    def insert_into_database(self, df, file_version=0, mock=False):
-        self.format_rows(df, file_version)
-        new_data = []
-        applicant_serializer = ApplicantSchema()
-        database_data = [applicant_serializer.dump(d) for d in Applicant.query.all()]
-
-        for d in database_data:
-            del d["version"]
-
-        for index, row in df.iterrows():
-            new_applicant = self.applicant_data(row)
-            json_new_applicant = applicant_serializer.dump(new_applicant)
-            del json_new_applicant["version"]
-            if json_new_applicant not in database_data:
-                new_data.append(new_applicant)
-
-        db.session.add_all(new_data)
-        db.session.commit()
-
-    def parse_to_models(self, df):
-        df.dropna(how="all", inplace=True)
-        df.reset_index(drop=True, inplace=True)
-
-        # insert empty columns for all columns in our column name map that don't exist in the df
-        for col in col_names_map.values():
-            if col == "Admissions Cycle" and col not in df.columns:
-                # insert admissions cycle into the columns
-                self.insert_admissions_cycle(df)
-            df[col] = df[col] if col in df.columns else ""
-        df["First Name"] = df["First Name"].fillna("")
-        df["Last Name"] = df["Last Name"].fillna("")
-        df["Email"] = df["Email"].fillna("")
-        df["Admissions Cycle"] = df["Admissions Cycle"].apply(lambda x: str(x)[:4])
-        self.insert_erpid(df)
-
-        fake = Faker()
-        Faker.seed(137920)
-        new_data = []
-        new_program_code = []
-        applicant_serializer = ApplicantSchema()
-        df = df.reindex(df.columns.tolist() + ["version"], axis=1)
-
-        for index, row in df.iterrows():
-
-            row["First Name"] = (
-                row["First Name"] if row["First Name"] else fake.first_name()
             )
-            row["Last Name"] = row["Last Name"] if row["Last Name"] else fake.last_name()
-            row["Email"] = (
-                row["Email"]
-                if row["Email"]
-                else f'{row["First Name"]}.{row["Last Name"]}@{fake.domain_name()}'
-            )
-            row["version"] = -1
-            new_applicant = self.applicant_data(row)
-            new_data.append(applicant_serializer.dump(new_applicant))
-        return new_data
+            program_codes.append(program_code)
+    db.session.add_all(new_program_code)
+    db.session.commit()
+
+def format_rows(df, file_version):
+    drop_empty_rows(df)
+    add_columns(df, file_version)
+    fill_null_values(df)
+    insert_erpid(df)
+    insert_missing_program_codes(df.groupby(["Programme Code", "Academic Program", "Type"]))
+
+# inserts values in the given dataframe to the database
+def insert_into_database(df, file_version=0, mock=False):
+    format_rows(df, file_version)
+    new_data = []
+    applicant_serializer = ApplicantSchema()
+    database_data = [applicant_serializer.dump(d) for d in Applicant.query.all()]
+
+    for d in database_data:
+        del d["version"]
+
+    for index, row in df.iterrows():
+        new_applicant = applicant_data(row)
+        json_new_applicant = applicant_serializer.dump(new_applicant)
+        del json_new_applicant["version"]
+        if json_new_applicant not in database_data:
+            new_data.append(new_applicant)
+
+    db.session.add_all(new_data)
+    db.session.commit()
+
+def parse_to_models(df):
+    df.dropna(how="all", inplace=True)
+    df.reset_index(drop=True, inplace=True)
+
+    # insert empty columns for all columns in our column name map that don't exist in the df
+    for col in col_names_map.values():
+        if col == "Admissions Cycle" and col not in df.columns:
+            # insert admissions cycle into the columns
+            insert_admissions_cycle(df)
+        df[col] = df[col] if col in df.columns else ""
+    df["First Name"] = df["First Name"].fillna("")
+    df["Last Name"] = df["Last Name"].fillna("")
+    df["Email"] = df["Email"].fillna("")
+    df["Admissions Cycle"] = df["Admissions Cycle"].apply(lambda x: str(x)[:4])
+    insert_erpid(df)
+
+    fake = Faker()
+    Faker.seed(137920)
+    new_data = []
+    applicant_serializer = ApplicantSchema()
+    df = df.reindex(df.columns.tolist() + ["version"], axis=1)
+
+    for _, row in df.iterrows():
+
+        row["First Name"] = (
+            row["First Name"] if row["First Name"] else fake.first_name()
+        )
+        row["Last Name"] = row["Last Name"] if row["Last Name"] else fake.last_name()
+        row["Email"] = (
+            row["Email"]
+            if row["Email"]
+            else f'{row["First Name"]}.{row["Last Name"]}@{fake.domain_name()}'
+        )
+        row["version"] = -1
+        new_applicant = applicant_data(row)
+        new_data.append(applicant_serializer.dump(new_applicant))
+    return new_data
 
