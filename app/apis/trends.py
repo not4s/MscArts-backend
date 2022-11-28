@@ -1,7 +1,7 @@
 from app import api
 from app.database import db
-from app.models.applicant import Applicant
-from app.schemas.applicant import ApplicantSchema
+from app.models.applicant import Applicant, Program
+from app.schemas.applicant import ApplicantSchema, ProgramSchema
 from app.utils.applicant import base_query
 from flask import request
 from flask_restx import Resource
@@ -11,7 +11,7 @@ from dateutil.relativedelta import relativedelta
 trends_api = api.namespace("api/trends", description="Trends API")
 
 applicant_deserializer = ApplicantSchema()
-
+program_deserializer = ProgramSchema()
 periods = ["day", "week", "month", "year"]
 
 @trends_api.route("/", methods=["GET"])
@@ -26,11 +26,17 @@ class TrendsApi(Resource):
       gender = request.args.get("gender", default=None, type=str)
       fee_status = request.args.get("fee_status", default=None, type=str)
       nationality = request.args.get("nationality", default=None, type=str)
+      decision_status = request.args.get("decision_status", default=None, type=str)
 
-      if not series:
-        if program_code is not None:
-          query = query.filter(Applicant.program_code == program_code)
+      if decision_status is not None and decision_status.lower() != "all":
+        query = query.filter(Applicant.decision_status == decision_status)
         
+      if program_code is not None and program_code.lower() != "all":
+        program_codes = [program_deserializer.dump(d)['code'] for d in db.session.query(Program).filter(Program.program_type == program_code)]
+        print(program_codes)
+        query = query.filter(Applicant.program_code.in_(program_codes))
+      
+      if not series:
         if gender is not None:
           query = query.filter(Applicant.gender == gender)
 
