@@ -23,6 +23,7 @@ class TrendsApi(Resource):
       period = request.args.get("period", default="year", type=str).lower()
       series = request.args.get("series", default=None, type=str)
       program_code = request.args.get("code", default=None, type=str)
+      cumulative = request.args.get("cumulative", default=True, type=bool)
       gender = request.args.get("gender", default=None, type=str)
       fee_status = request.args.get("fee_status", default=None, type=str)
       nationality = request.args.get("nationality", default=None, type=str)
@@ -79,6 +80,13 @@ class TrendsApi(Resource):
         data = split_into_week(unit, today, applicants, series)
       elif period == "day":
         data = split_into_day(unit, today, applicants, series)
+      
+      if cumulative:
+        total = 0
+        for d in data[::-1]:
+          total += d["count"]
+          d["count"] = total
+
       return data, 200
 
 def all_year_data(query, series):
@@ -124,7 +132,7 @@ def split_into_month(unit, today, data_since_old_date, series, upper_bound_inclu
         period = (lower_bound + relativedelta(days = 1)).strftime("%m/%d/%Y")
       else:
         count = len([x for x in data_since_old_date if x['submitted'] >= lower_bound and x['submitted'] < upper_bound and x['series'] == s])
-        period = lower_bound.strftime("%m/%d/%Y")
+        period = lower_bound.strftime("%m/%d")
       data.append({"period": period, 
       "series": s,
       "count": count})
@@ -147,7 +155,7 @@ def split_into_week(unit, today, data_since_old_date, series, upper_bound_inclus
         period = (lower_bound + relativedelta(days = 1)).strftime("%m/%d/%Y")
       else:
         count = len([x for x in data_since_old_date if x['submitted'] >= lower_bound and x['submitted'] < upper_bound and x['series'] == s])
-        period = lower_bound.strftime("%m/%d/%Y")
+        period = lower_bound.strftime("%m/%d")
       data.append({"period": period, 
       "series": s,
       "count": count})
@@ -179,16 +187,15 @@ class TrendsCycleApi(Resource):
       period = request.args.get("period", default="year", type=str).lower()
       cycles = request.args.get("cycle", default=None, type=str) # e.g. cycle=21,22,23
       cumulative = request.args.get("cumulative", default=True, type=bool)
-      start =request.args.get("start", default=10, type=int)
-      end = request.args.get("end", default=10, type=int)
+      start = request.args.get("start", default=None, type=str)
       series = request.args.get("series", default=None, type=str)
       program_code = request.args.get("code", default=None, type=str)
       gender = request.args.get("gender", default=None, type=str)
       fee_status = request.args.get("fee_status", default=None, type=str)
       nationality = request.args.get("nationality", default=None, type=str)
 
-      if start < 10 and end > 10 or start > 10 and end == start:
-        return {"message": "Invalid time frame given"}, 400
+      # if start < 10 and end > 10 or start > 10 and end == start:
+      #   return {"message": "Invalid time frame given"}, 400
 
       if not series:
         if program_code is not None:
@@ -222,24 +229,14 @@ class TrendsCycleApi(Resource):
           applicants = list(map(lambda x: {'submitted': datetime.strptime(x['submitted'], "%Y-%m-%d").date(), 'series': 'ALL'}, applicants))
         print(applicants)
 
-        # get "today's" date
-        if end > 10:
-          today = date(int(cycle), end, 1)
-        else:
-          today = date(int(cycle) + 1, end, 1)
-        
-        # get the "start" date
-        if start >= 10:
-          start_date = date(int(cycle), start, 1)
-        else:
-          start_date = date(int(cycle) + 1, start)
+        start_date = datetime.strptime(start, "%Y/%m/%d").date()
         
         if period == "month":
-          unit = (today.year - start_date.year) * 12 + today.month - start_date.month + 1
+          today = start_date + relativedelta(months=unit)
         elif period == "week":
-          unit = abs(today - start_date).days // 7 + 1
+          today = start_date + relativedelta(weeks=unit)
         elif period == "day":
-          unit = abs(today - start_date).days
+          today = start_date + relativedelta(days=unit)
 
         print("Today's date:", today)
         print("Oldest possible entry", start_date)
@@ -252,6 +249,13 @@ class TrendsCycleApi(Resource):
           new_data = split_into_week(unit, today, applicants, series_types, upper_bound_inclusive=False)
         elif period == "day":
           new_data = split_into_day(unit, today, applicants, series_types)
+        
+        if cumulative:
+          total = 0
+          for d in new_data[::-1]:
+            total += d["count"]
+            d["series"] = cycle
+            d["count"] = total
         
         for d in new_data:
           d["series"] = cycle
