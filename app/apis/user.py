@@ -210,3 +210,27 @@ class UserRoleTable(Resource):
 
         data = [user_access_deserializer.dump(d) for d in query]
         return data, 200
+
+@user_api.route("/layout/", methods=["GET", "POST"])
+class UserRoleTable(Resource):
+    @jwt_required()
+    def get(self):
+        username = get_jwt()["sub"]["username"]    
+        if username is None:
+            return {"message": "No user logged in"}, 400
+        user = UserAccess.query.filter_by(username=username).first()
+        return user.layout
+    @jwt_required()
+    def post(self):
+        username = get_jwt()["sub"]["username"]    
+        layout = request.json.get("layout", None)
+        if username is None:
+            return {"message": "No user logged in"}, 400
+        if layout is None:
+            return {"message": "No layout given"}, 400
+        user = UserAccess.query.filter_by(username=username).first()
+        print(user)
+        print("hi<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<", json.dumps(layout))
+        user.layout = json.dumps(layout)
+        db.session.commit()
+        return {"message": "Successfully updated user layout"}, 200
