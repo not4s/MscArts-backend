@@ -1,18 +1,20 @@
 from app import api
 from app.database import db
-from app.models.applicant import Applicant, Program
-from app.schemas.applicant import ApplicantSchema
-from app.apis.user import read_access_required
+from app.models.applicant import Applicant, Program, ApplicantComment
+from app.schemas.applicant import ApplicantSchema, ApplicantCommentSchema
+from app.apis.user import read_access_required, write_access_required
 from app.utils.applicant import base_query, fetch_applicants
 from app.utils.graph import applicants_to_bar, applicants_to_pie
 from flask_jwt_extended import get_jwt
 from flask import request, abort
 from flask_restx import Resource
+from sqlalchemy import desc
 import pandas as pd
 
 applicant_api = api.namespace("api/applicant", description="Applicant API")
 
 applicant_deserializer = ApplicantSchema()
+applicant_comment_deserializer = ApplicantCommentSchema()
 
 filters = [
     ("gender", str),
@@ -20,6 +22,7 @@ filters = [
     ("program_code", str),
     ("erpid", int),
     ("combined_fee_status", str),
+    ("admissions_cycle", int),
 ]
 
 
@@ -32,6 +35,8 @@ class ApplicantAttributeApi(Resource):
             data[col] = []
             for value in db.session.query(Applicant.__dict__[col]).distinct():
                 data[col].append(applicant_deserializer.dump(value)[col])
+            if col == "admissions_cycle":
+                data[col] = [d for d in data[col] if d > 0]
 
         return data, 200
 
@@ -176,3 +181,39 @@ class ApplicantApi(Resource):
             return data, 200
         else:
             return {"message": "Unrecognized Graph Type"}, 400
+
+
+@applicant_api.route("/comment/", methods=["GET", "POST"])
+class ApplicantCommentAPI(Resource):
+    @write_access_required
+    def get(self):
+        erpid = request.args.get("erpid", default=None, type=int)
+
+        if erpid is None:
+            return [], 200
+
+        query = ApplicantComment.query.filter_by(erpid=erpid).order_by(
+            desc(ApplicantComment.timestamp)
+        )
+
+        return [applicant_comment_deserializer.dump(d) for d in query.all()], 200
+
+    @write_access_required
+    def post(self):
+        if not request.is_json:
+            abort(406, description="MIME type is required to be application/json.")
+
+        body = request.json
+
+        comment = body.get("comment", None)
+        erpid = body.get("erpid", None)
+        username = get_jwt()["sub"]["username"]
+
+        if erpid is None or comment is None:
+            return {"message": "Malformed Request"}, 400
+
+        newComment = ApplicantComment(erpid=erpid, username=username, comment=comment)
+
+        db.session.add(newComment)
+        db.session.commit()
+        return {"message": "Added new comment"}, 200
