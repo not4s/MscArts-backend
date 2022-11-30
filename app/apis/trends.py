@@ -166,12 +166,16 @@ def split_into_week(unit, today, data_since_old_date, series, upper_bound_inclus
 
   return data
 
-def split_into_day(unit, today, data_since_old_date, series):
+def split_into_day(unit, today, data_since_old_date, series, include_year=True):
   data = []
   date = today
   while unit > 0:
     for s in series:
-      data.append({"period": date.strftime("%m/%d/%Y"), 
+      if include_year:
+        period = date.strftime("%m/%d/%Y")
+      else:
+        period = date.strftime("%m/%d")
+      data.append({"period": period,
       "count": len([x for x in data_since_old_date if x['submitted'] == date and x['series'] == s])})
     date = date - relativedelta(days = 1)
     unit -= 1
@@ -231,9 +235,7 @@ class TrendsCycleApi(Resource):
       else:
         series_types = set(['ALL'])
       for cycle in cycles:
-        print(f"---------{cycle}--------")
         applicants = [applicant_deserializer.dump(d) for d in query.filter(Applicant.admissions_cycle == int(cycle))]
-        print("got", len(applicants), "applicants from database")
         if series:
           applicants = list(map(lambda x: {'submitted': datetime.strptime(x['submitted'], "%Y-%m-%d").date(), 'series': x[series]}, applicants))
         else:
@@ -243,7 +245,6 @@ class TrendsCycleApi(Resource):
           start_date = datetime.strptime(f"{cycle}/{start}", "%Y/%m/%d").date()
         else:
           start_date = datetime.strptime(f"{int(cycle) - 1}/{start}", "%Y/%m/%d").date()
-        print(start_date)
 
         if period == "month":
           today = start_date + relativedelta(months=unit)
@@ -252,16 +253,12 @@ class TrendsCycleApi(Resource):
         elif period == "day":
           today = start_date + relativedelta(days=unit)
 
-        print("Today's date:", today)
-        print("Oldest possible entry", start_date)
-        print("Going back", unit, period)
-
         if period == "month":
           new_data = split_into_month(unit, today, applicants, series_types, upper_bound_inclusive=False)
         elif period == "week":
           new_data = split_into_week(unit, today, applicants, series_types, upper_bound_inclusive=False)
         elif period == "day":
-          new_data = split_into_day(unit, today, applicants, series_types)
+          new_data = split_into_day(unit, today, applicants, series_types, include_year=False)
         
         if cumulative:
           total = 0
