@@ -53,6 +53,8 @@ drop_columns = [
     "(Do Not Modify) Modified On",
 ]
 
+# erpid = 1
+
 
 def csv_to_df(filename, is_csv):
     if is_csv:
@@ -116,7 +118,7 @@ def insert_erpid(df):
     df["Erpid"] = range(1, df.shape[0] + 1)
 
 
-def insert_admissions_cycle(self, df):
+def insert_admissions_cycle(df):
     df["Admissions Cycle"] = df["Anticipated Entry Term"].apply(
         lambda x: str(x).split()[1].split("-")[0]
     )
@@ -128,6 +130,11 @@ def drop_empty_rows(df):
     df.dropna(how="all", inplace=True)
     df.reset_index(drop=True, inplace=True)
 
+# def new_erpid(df):
+#     if erpid < len(df.index):
+#         erpid = len(df.index)
+#     erpid += 1
+#     return erpid
 
 def fill_null_values(df):
     fake = Faker()
@@ -150,7 +157,13 @@ def fill_null_values(df):
         else row["Email"],
         axis=1,
     )
+    # df["Erpid"] = df.apply(
+    #     lambda row: new_erpid(df) if row["Erpid"] == "" or row["Erpid"] is None else row["Erpid"],
+    #     axis=1
+    # )
     df["Admissions Cycle"] = df["Admissions Cycle"].fillna(-1)
+
+    # print(df["Erpid"])
 
 
 def add_columns(df, file_version):
@@ -162,10 +175,10 @@ def add_columns(df, file_version):
     df["version"] = file_version
 
 
-def insert_missing_program_codes(df):
+def missing_program_codes(df):
     new_program_code = []
     program_codes = list(map(lambda x: x.code, Program.query.all()))
-    for name, group in df:
+    for name, _ in df:
         program_code = name[0]
         program_name = name[1]
         academic_level = name[2]
@@ -179,7 +192,11 @@ def insert_missing_program_codes(df):
                 )
             )
             program_codes.append(program_code)
-    db.session.add_all(new_program_code)
+    return new_program_code
+
+
+def add_to_database(data):
+    db.session.add_all(data)
     db.session.commit()
 
 
@@ -188,30 +205,36 @@ def format_rows(df, file_version):
     add_columns(df, file_version)
     fill_null_values(df)
     insert_erpid(df)
-    insert_missing_program_codes(
+    new_program_codes = missing_program_codes(
         df.groupby(["Programme Code", "Academic Program", "Type"])
     )
+    add_to_database(new_program_codes)
+    # print(pd.concat(g for _, g in df.groupby("Erpid") if len(g) > 1))
 
 
-# inserts values in the given dataframe to the database
-def insert_into_database(df, file_version=0, mock=False):
-    format_rows(df, file_version)
-    new_data = []
+def get_new_applicants(applicants):
+    new_applicants = []
     applicant_serializer = ApplicantSchema()
     database_data = [applicant_serializer.dump(d) for d in Applicant.query.all()]
 
     for d in database_data:
         del d["version"]
 
-    for index, row in df.iterrows():
+    for _, row in applicants.iterrows():
         new_applicant = applicant_data(row)
         json_new_applicant = applicant_serializer.dump(new_applicant)
         del json_new_applicant["version"]
         if json_new_applicant not in database_data:
-            new_data.append(new_applicant)
+            new_applicants.append(new_applicant)
+    
+    return new_applicants
 
-    db.session.add_all(new_data)
-    db.session.commit()
+
+# inserts values in the given dataframe to the database
+def insert_into_database(df, file_version=0):
+    format_rows(df, file_version)
+    new_applicants = get_new_applicants(df)
+    add_to_database(new_applicants)
 
 
 def parse_to_models(df):
