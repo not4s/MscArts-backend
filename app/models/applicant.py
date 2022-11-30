@@ -1,5 +1,6 @@
 import enum
 from app.database import db
+from sqlalchemy.sql import func
 from sqlalchemy import ForeignKey
 
 
@@ -68,3 +69,11 @@ class Target(db.Model):
     year = db.Column(db.String(10), primary_key=True, autoincrement=False)
     fee_status = db.Column(db.String, primary_key=True, autoincrement=False)
     target = db.Column(db.Integer)
+
+
+class ApplicantComment(db.Model):
+    comment_id = db.Column(db.Integer, primary_key=True)
+    erpid = db.Column(db.Integer)  # TODO Fix Foreign Key Relations
+    username = db.Column(db.String)  # TODO Fix Foreign Key Relations
+    timestamp = db.Column(db.DateTime, default=func.now())
+    comment = db.Column(db.String)
