@@ -20,6 +20,7 @@ filters = [
     ("program_code", str),
     ("erpid", int),
     ("combined_fee_status", str),
+    ("admissions_cycle", int),
 ]
 
 
