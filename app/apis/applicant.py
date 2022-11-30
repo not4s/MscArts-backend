@@ -33,6 +33,8 @@ class ApplicantAttributeApi(Resource):
             data[col] = []
             for value in db.session.query(Applicant.__dict__[col]).distinct():
                 data[col].append(applicant_deserializer.dump(value)[col])
+            if col == "admissions_cycle":
+                data[col] = [d for d in data[col] if d > 0]
 
         return data, 200
 
