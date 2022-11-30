@@ -1,8 +1,9 @@
+import pandas as pd
 from app import api
 from app.database import db
 from app.models.applicant import Applicant, Target, Program
 from app.schemas.applicant import ApplicantSchema, TargetSchema
-from app.utils.applicant import base_query
+from app.utils.applicant import base_query, fetch_applicants
 from flask import request, abort
 from flask_restx import Resource
 
@@ -35,16 +36,15 @@ class TargetProgressApi(Resource):
 
         data = [target_deserializer.dump(d) for d in query.all()]
 
-        for i, target in enumerate(data):
-            query = base_query()
-            query = query.join(Program, Applicant.program_code == Program.code)
-            query = query.filter(
-                Program.program_type == target["program_type"],
-                Applicant.admissions_cycle == target["year"],
-                Applicant.decision_status.in_(live),
-            )
-            data[i] = {**target, "progress": query.count()}
+        applicants = fetch_applicants(None, "custom", ",".join(live))
+        df = pd.DataFrame(applicants)
+        df = df[["program_type", "admissions_cycle", "combined_fee_status"]].value_counts()
 
+        for i, target in enumerate(data):
+            print(data[i])
+            data[i]['progress'] = int(df[(target['program_type'], int(target['year']), target['fee_status'])])
+
+        print(data)
         return data, 200
 
 
