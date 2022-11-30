@@ -22,7 +22,23 @@ filters = [
     ("program_code", str),
     ("erpid", int),
     ("combined_fee_status", str),
+    ("admissions_cycle", int),
 ]
+
+
+@applicant_api.route("/attribute/", methods=["GET"])
+class ApplicantAttributeApi(Resource):
+    def get(self):
+
+        data = {}
+        for (col, col_type) in filters:
+            data[col] = []
+            for value in db.session.query(Applicant.__dict__[col]).distinct():
+                data[col].append(applicant_deserializer.dump(value)[col])
+            if col == "admissions_cycle":
+                data[col] = [d for d in data[col] if d > 0]
+
+        return data, 200
 
 
 @applicant_api.route("/", methods=["GET"])
