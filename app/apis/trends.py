@@ -182,16 +182,23 @@ def split_into_day(unit, today, data_since_old_date, series, include_year=True):
 
   return data
 
-def valid_timeframe(start, unit, period):
-  start_date = datetime.strptime(f"2022/{start}", "%Y/%m/%d").date()
-  if period == "month":
-    end_date = start_date + relativedelta(months = unit)
-  elif period == "week":
-    end_date = start_date + relativedelta(weeks = unit)
-  elif period == "day":
-    end_date = start_date + relativedelta(days = unit)
-  
-  return end_date <= admissions_cycle_end + relativedelta(days = 1)
+def get_unit(start_date, end_date, period):
+  unit = 0
+  curr_date = start_date
+  while curr_date < end_date:
+    unit += 1
+
+    if period == "month":
+      curr_date = curr_date + relativedelta(months = 1)
+    elif period == "week":
+      curr_date = curr_date + relativedelta(weeks = 1)
+    elif period == "day":
+      curr_date = curr_date + relativedelta(days = 1)
+
+  return unit
+
+def valid_timeframe(start, end):
+  return start >= "10/01" and end >= "10/01" and start <= end or start >= "10/01" and end <= "07/31" or start <= "07/31" and end <= "07/31" and start <= end
 
 # for each "cycle", get all the data between start and end month for each period
 @trends_api.route("/cycle", methods=["GET"])
@@ -199,18 +206,18 @@ class TrendsCycleApi(Resource):
     def get(self):
       query = base_query()
 
-      unit = request.args.get("unit", default=10, type=int)
       period = request.args.get("period", default="month", type=str).lower()
       cycles = request.args.get("cycle", default=None, type=str) # e.g. cycle=21,22,23
       cumulative = request.args.get("cumulative", default=True, type=bool)
       start = request.args.get("start", default="10/01", type=str)
+      end = request.args.get("end", default="07/31", type=str)
       series = request.args.get("series", default=None, type=str)
       program_code = request.args.get("code", default=None, type=str)
       gender = request.args.get("gender", default=None, type=str)
       fee_status = request.args.get("fee_status", default=None, type=str)
       nationality = request.args.get("nationality", default=None, type=str)
 
-      if not valid_timeframe(start, unit, period):
+      if not valid_timeframe(start, end):
         return {"message": "Invalid time frame given"}, 400
 
       if not series:
@@ -245,6 +252,13 @@ class TrendsCycleApi(Resource):
           start_date = datetime.strptime(f"{cycle}/{start}", "%Y/%m/%d").date()
         else:
           start_date = datetime.strptime(f"{int(cycle) - 1}/{start}", "%Y/%m/%d").date()
+        
+        if end <= "07/31":
+          end_date = datetime.strptime(f"{cycle}/{end}", "%Y/%m/%d").date()
+        else:
+          end_date = datetime.strptime(f"{int(cycle) - 1}/{end}", "%Y/%m/%d").date()
+        
+        unit = get_unit(start_date, end_date, period)
 
         if period == "month":
           today = start_date + relativedelta(months=unit)
