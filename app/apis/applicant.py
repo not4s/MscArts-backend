@@ -45,98 +45,26 @@ class ApplicantAttributeApi(Resource):
 class ApplicantApi(Resource):
     @read_access_required
     def get(self):
-        query = base_query()
-
+        year = request.args.get("year", default=None, type=int)
         program_type_filter = request.args.get("program_type", default=None, type=str)
         decision_status_filter = request.args.get(
-            "decision_status", default=None, type=str
+            "decision_status", default="", type=str
         )
+        custom_decision = request.args.get("custom_decision", default=None, type=str)
+        mock = request.args.get("mock", default=None)
 
-        query = query.join(Program, Applicant.program_code == Program.code)
-        query = query.filter(Program.active == True)
+        username = None
 
-        if program_type_filter is not None:
-            query = query.filter(Program.program_type == program_type_filter)
+        if mock is not None:
+            username = get_jwt()["sub"]["username"]
 
-        if decision_status_filter == "live":
-            # live applicants haven't been enrolled yet (they could still come)
-            query = query.filter(
-                Applicant.decision_status.in_(live), Applicant.enrolled.is_(None)
-            )
-            # TODO: cleared/paid/accepted
-        elif decision_status_filter == "not_live":
-            query = query.filter(Applicant.decision_status.notin_(live))
-
-        for (col, col_type) in filters:
-            filter_value = request.args.get(col, default=None, type=col_type)
-
-            if filter_value is not None:
-                if col_type is str:
-                    query = query.filter(Applicant.__dict__[col].ilike(filter_value))
-                elif col_type is int:
-                    query = query.filter(Applicant.__dict__[col] == filter_value)
-
-        # query = query.filter().group_by(Applicant.erpid)
-        print(query)
-
-        data = [applicant_deserializer.dump(d) for d in query.all()]
+        data = fetch_applicants(
+            program_type_filter, decision_status_filter, custom_decision, year, username
+        )
 
         if len(data) == 0:
             return data, 200
 
-        count = request.args.get("count", default=None, type=str)
-        series = request.args.get("series", default=None, type=str)
-
-        if count and series:
-            df = pd.DataFrame(data)
-            counted = df[[count, series]].value_counts()
-            reformatted = []
-            for key, value in counted.items():
-                if key[0].strip() != "":
-                    combined = list(
-                        filter(
-                            lambda x: x[count] == "Combined" and x["type"] == key[1],
-                            reformatted,
-                        )
-                    )
-                    if len(combined) > 0:
-                        reformatted.remove(combined[0])
-                        reformatted.append(
-                            {
-                                count: "Combined",
-                                "count": int(value) + combined[0]["count"],
-                                "type": key[1],
-                            }
-                        )
-                    else:
-                        reformatted.append(
-                            {
-                                count: "Combined",
-                                "count": int(value),
-                                "type": key[1],
-                            }
-                        )
-                    reformatted.append(
-                        {
-                            count: key[0],
-                            "count": int(value),
-                            "type": key[1],
-                        }
-                    )
-            reformatted = list(sorted(reformatted, key=lambda x: -x["count"]))
-            return reformatted, 200
-
-        if count:
-            df = pd.DataFrame(data)
-            counted = df[count].value_counts()
-            reformatted = []
-            for key, value in counted.items():
-                if key.strip() != "":
-                    reformatted.append(
-                        {count: "Combined", "count": int(value), "type": key}
-                    )
-                    reformatted.append({count: key, "count": int(value), "type": key})
-            return reformatted, 200
         return data, 200
 
 

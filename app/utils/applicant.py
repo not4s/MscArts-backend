@@ -1,10 +1,12 @@
 from app import db
 from app.models.applicant import Applicant, Program
 from app.schemas.applicant import ApplicantSchema
+from app.schemas.applicant import ProgramSchema
 from app.utils.mock_cache import mock_cache
 from sqlalchemy.sql import func, and_
 
 applicant_deserializer = ApplicantSchema()
+program_deserializer = ProgramSchema()
 
 live = [
     "Condition Firm",
@@ -69,4 +71,16 @@ def fetch_applicants(
         custom_decisions = custom_decision.split(",")
         query = query.filter(Applicant.decision_status.in_(custom_decisions))
 
-    return [applicant_deserializer.dump(d) for d in query.all()]
+    data = []
+    prog_dict = {}
+
+    for d in Program.query.all():
+        prog_dict[d.code] = d.program_type
+
+
+    for d in query.all():
+        deserialized = applicant_deserializer.dump(d)
+        deserialized['program_type'] = prog_dict[deserialized['program_code']]
+        data.append(deserialized)
+
+    return data
