@@ -47,7 +47,11 @@ col_names_map = {
     "Enrolled (Opportunity) (Opportunity)": "Enrolled Date",
 }
 
-drop_columns = ["(Do Not Modify) Application Folder", "(Do Not Modify) Row Checksum", "(Do Not Modify) Modified On"]
+drop_columns = [
+    "(Do Not Modify) Application Folder",
+    "(Do Not Modify) Row Checksum",
+    "(Do Not Modify) Modified On",
+]
 
 
 def csv_to_df(filename, is_csv):
@@ -69,7 +73,7 @@ def applicant_data(row):
         first_name=row["First Name"],
         last_name=row["Last Name"],
         gender=row["Gender"],
-        birth_date=self.convert_time(row["Birth Date"]),
+        birth_date=convert_time(row["Birth Date"]),
         nationality=row["Primary Nationality"],
         ethnicity=row["Ethnicity"],
         disability=row["Disability Type"],
@@ -97,6 +101,7 @@ def applicant_data(row):
         marked_complete=convert_time(row["Marked Complete Date"]),
     )
 
+
 def convert_time(time_str):
     if type(time_str) is datetime:
         return time_str
@@ -106,35 +111,47 @@ def convert_time(time_str):
     elif type(time_str) is pd._libs.tslibs.timestamps.Timestamp:
         return time_str.to_pydatetime()
 
+
 def insert_erpid(df):
     df["Erpid"] = range(1, df.shape[0] + 1)
 
+
 def insert_admissions_cycle(self, df):
-    df["Admissions Cycle"] = df["Anticipated Entry Term"].apply(lambda x: str(x).split()[1].split('-')[0])
+    df["Admissions Cycle"] = df["Anticipated Entry Term"].apply(
+        lambda x: str(x).split()[1].split("-")[0]
+    )
     # df["Admissions Cycle"] = pd.to_numeric(df["Admissions Cycle"])
+
 
 def drop_empty_rows(df):
     df.drop(labels=(set(drop_columns) & set(df.columns)), axis=1, inplace=True)
     df.dropna(how="all", inplace=True)
     df.reset_index(drop=True, inplace=True)
 
+
 def fill_null_values(df):
     fake = Faker()
     Faker.seed(137920)
     df["First Name"] = df.apply(
-        lambda row: fake.first_name() if row["First Name"] == "" or row["First Name"] is None else row["First Name"],
-        axis=1
+        lambda row: fake.first_name()
+        if row["First Name"] == "" or row["First Name"] is None
+        else row["First Name"],
+        axis=1,
     )
     df["Last Name"] = df.apply(
-        lambda row: fake.last_name() if row["Last Name"] == "" or row["Last Name"] is None else row["Last Name"],
-        axis=1
+        lambda row: fake.last_name()
+        if row["Last Name"] == "" or row["Last Name"] is None
+        else row["Last Name"],
+        axis=1,
     )
     df["Email"] = df.apply(
-        lambda row: f'{row["First Name"]}.{row["Last Name"]}@{fake.domain_name()}' if 
-        row["First Name"] == "" or row["Email"] is None else row["Email"],
-        axis=1
+        lambda row: f'{row["First Name"]}.{row["Last Name"]}@{fake.domain_name()}'
+        if row["First Name"] == "" or row["Email"] is None
+        else row["Email"],
+        axis=1,
     )
     df["Admissions Cycle"] = df["Admissions Cycle"].fillna(-1)
+
 
 def add_columns(df, file_version):
     for col in col_names_map.values():
@@ -143,6 +160,7 @@ def add_columns(df, file_version):
             insert_admissions_cycle(df)
         df[col] = df[col] if col in df.columns else ""
     df["version"] = file_version
+
 
 def insert_missing_program_codes(df):
     new_program_code = []
@@ -164,12 +182,16 @@ def insert_missing_program_codes(df):
     db.session.add_all(new_program_code)
     db.session.commit()
 
+
 def format_rows(df, file_version):
     drop_empty_rows(df)
     add_columns(df, file_version)
     fill_null_values(df)
     insert_erpid(df)
-    insert_missing_program_codes(df.groupby(["Programme Code", "Academic Program", "Type"]))
+    insert_missing_program_codes(
+        df.groupby(["Programme Code", "Academic Program", "Type"])
+    )
+
 
 # inserts values in the given dataframe to the database
 def insert_into_database(df, file_version=0, mock=False):
@@ -190,6 +212,7 @@ def insert_into_database(df, file_version=0, mock=False):
 
     db.session.add_all(new_data)
     db.session.commit()
+
 
 def parse_to_models(df):
     df.dropna(how="all", inplace=True)
@@ -228,4 +251,3 @@ def parse_to_models(df):
         new_applicant = applicant_data(row)
         new_data.append(applicant_serializer.dump(new_applicant))
     return new_data
-
