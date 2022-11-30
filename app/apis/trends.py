@@ -2,7 +2,7 @@ from app import api
 from app.database import db
 from app.models.applicant import Applicant, Program
 from app.schemas.applicant import ApplicantSchema, ProgramSchema
-from app.utils.applicant import base_query
+from app.utils.applicant import base_query, fetch_applicants
 from flask import request
 from flask_restx import Resource
 from datetime import date, datetime
@@ -204,7 +204,7 @@ def valid_timeframe(start, end):
 @trends_api.route("/cycle", methods=["GET"])
 class TrendsCycleApi(Resource):
     def get(self):
-      query = base_query()
+      # query = base_query()
 
       period = request.args.get("period", default="month", type=str).lower()
       cycles = request.args.get("cycle", default=None, type=str) # e.g. cycle=21,22,23
@@ -212,26 +212,19 @@ class TrendsCycleApi(Resource):
       start = request.args.get("start", default="10/01", type=str)
       end = request.args.get("end", default="07/31", type=str)
       series = request.args.get("series", default=None, type=str)
-      program_code = request.args.get("code", default=None, type=str)
+      # program_code = request.args.get("code", default=None, type=str)
       gender = request.args.get("gender", default=None, type=str)
       fee_status = request.args.get("fee_status", default=None, type=str)
       nationality = request.args.get("nationality", default=None, type=str)
 
+      program_type_filter = request.args.get("program_type", default=None, type=str)
+      decision_status_filter = request.args.get(
+        "decision_status", default=None, type=str
+      )
+      custom_decision = request.args.get("custom_decision", default=None, type=str)
+
       if not valid_timeframe(start, end):
         return {"message": "Invalid time frame given"}, 400
-
-      if not series:
-        if program_code is not None:
-          query = query.filter(Applicant.program_code == program_code)
-        
-        if gender is not None:
-          query = query.filter(Applicant.gender == gender)
-
-        if fee_status is not None:
-          query = query.filter(Applicant.combined_fee_status == fee_status)
-
-        if nationality is not None:
-          query = query.filter(Applicant.nationality == nationality)
       
       cycles = cycles.split(",")
       cycles = ["20" + cycle for cycle in cycles]
@@ -241,11 +234,26 @@ class TrendsCycleApi(Resource):
         series_types = set([applicant_deserializer.dump(d)[series] for d in db.session.query(Applicant)])
       else:
         series_types = set(['ALL'])
+
       for cycle in cycles:
-        applicants = [applicant_deserializer.dump(d) for d in query.filter(Applicant.admissions_cycle == int(cycle))]
+        print(cycle)
+        applicants = fetch_applicants(
+          program_type_filter, decision_status_filter, custom_decision, year=int(cycle)
+        )
+        print(len(applicants))
+        # applicants = [applicant_deserializer.dump(d) for d in query.filter(Applicant.admissions_cycle == int(cycle))]
         if series:
           applicants = list(map(lambda x: {'submitted': datetime.strptime(x['submitted'], "%Y-%m-%d").date(), 'series': x[series]}, applicants))
         else:
+          if gender is not None:
+            applicants = list(filter(lambda x: x['gender'] == gender, applicants))
+          
+          if fee_status is not None:
+            applicants = list(filter(lambda x: x['combined_fee_status'] == fee_status, applicants))
+          
+          if nationality is not None:
+            applicants = list(filter(lambda x: x['nationality'] == nationality, applicants))
+
           applicants = list(map(lambda x: {'submitted': datetime.strptime(x['submitted'], "%Y-%m-%d").date(), 'series': 'ALL'}, applicants))
 
         if start < "10/01":
