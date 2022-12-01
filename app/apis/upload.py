@@ -80,15 +80,19 @@ class UploadApi(Resource):
 
         if file.filename == "":
             abort(406, description="No File found")
+        
+        deposit = request.form.get("type") == "DEPOSIT"
 
         if file and validate_file(file):
-            new_file = FileControl(name=secure_filename(file.filename))
+            new_file = FileControl(name=secure_filename(file.filename),
+                                   filetype="Deposit" if deposit else "Applicant")
             db.session.add(new_file)
             db.session.commit()
 
             try:
                 df = csv_to_df(file, is_csv=file.filename.endswith(".csv"))
-                insert_into_database(df, new_file.version)
+                insert_into_database(df, new_file.version, deposit)
+
             except:
                 db.session.delete(new_file)
                 db.session.commit()

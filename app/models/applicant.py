@@ -2,10 +2,20 @@ import enum
 from app.database import db
 from sqlalchemy.sql import func
 from sqlalchemy import ForeignKey
+from sqlalchemy import event
 
 
 class ProgramMapping(db.Model):
     program_type = db.Column(db.String(10), primary_key=True, autoincrement=False)
+    
+@event.listens_for(ProgramMapping.__table__, 'after_create')
+def create_maps(*args, **kwargs):
+    db.session.add(ProgramMapping(program_type='AIML'))
+    db.session.add(ProgramMapping(program_type='MAI'))
+    db.session.add(ProgramMapping(program_type='MAC'))
+    db.session.add(ProgramMapping(program_type='MCS'))
+    db.session.add(ProgramMapping(program_type='MCSS'))
+    db.session.commit()
 
 
 class Program(db.Model):
@@ -15,7 +25,20 @@ class Program(db.Model):
     active = db.Column(db.Boolean, default=True)
     program_type = db.Column(db.String(10), ForeignKey("program_mapping.program_type"))
 
+@event.listens_for(Program.__table__, 'after_create')
+def create_users(*args, **kwargs):
+    db.session.add(Program(code='G5UO.1', name='Advanced Computing (MSc 1YFT)', academic_level='PG Taught Degree', active=True, program_type='MAC'))
+    db.session.add(Program(code='G5T1.1', name='Artificial Intelligence (MSc 1YFT)', academic_level='PG Taught Degree', active=True, program_type='MAI'))
+    db.session.add(Program(code='G5U10.1', name='Computing (Artificial Intelligence and Machine Learning) (MSc 1YFT)', academic_level='PG Taught Degree', active=True, program_type='AIML'))
+    db.session.add(Program(code='G5U11.3', name='Computing (Management and Finance) (MSc 1YFT)', academic_level='PG Taught Degree', active=True, program_type='MCSS'))
+    db.session.add(Program(code='G5U6.2', name='Computing (MSc 1YFT)', academic_level='PG Taught Degree', active=True, program_type='MCS'))
+    db.session.add(Program(code='G5U21.2', name='Computing (Security and Reliability) (MSc 1YFT)', academic_level='PG Taught Degree', active=True, program_type='MCSS'))
+    db.session.add(Program(code='G5U16.1', name='Computing (Software Engineering) (MSc 1YFT)', academic_level='PG Taught Degree', active=True, program_type='MCSS'))
+    db.session.add(Program(code='G5U13.2', name='Computing (Visual Computing and Robotics) (MSc 1YFT)', academic_level='PG Taught Degree', active=True, program_type='MCSS'))
+    db.session.add(Program(code='G5U6.1', name='Computing Science (MSc 1YFT)', academic_level='PG Taught Degree', active=True, program_type='MCSS'))
+    db.session.commit()
 
+    
 class Applicant(db.Model):
     version = db.Column(
         db.Integer,
@@ -57,6 +80,7 @@ class Applicant(db.Model):
     deferred = db.Column(db.Date)
     enrolled = db.Column(db.Date)
     marked_complete = db.Column(db.Date)
+    deposit_paid = db.Column(db.Boolean)
 
 
 class Target(db.Model):

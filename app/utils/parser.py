@@ -65,7 +65,7 @@ def csv_to_df(filename, is_csv):
         return df.rename(columns=col_names_map)
 
 
-def applicant_data(row):
+def applicant_data(row, deposit):
     return Applicant(
         version=row["version"],
         anticipated_entry_term=row["Anticipated Entry Term"],
@@ -101,6 +101,7 @@ def applicant_data(row):
         deferred=convert_time(row["Deferred Date"]),
         enrolled=convert_time(row["Enrolled Date"]),
         marked_complete=convert_time(row["Marked Complete Date"]),
+        deposit_paid=deposit,
     )
 
 
@@ -212,7 +213,7 @@ def format_rows(df, file_version):
     # print(pd.concat(g for _, g in df.groupby("Erpid") if len(g) > 1))
 
 
-def get_new_applicants(applicants):
+def get_new_applicants(applicants, deposit):
     new_applicants = []
     applicant_serializer = ApplicantSchema()
     database_data = [applicant_serializer.dump(d) for d in Applicant.query.all()]
@@ -221,7 +222,7 @@ def get_new_applicants(applicants):
         del d["version"]
 
     for _, row in applicants.iterrows():
-        new_applicant = applicant_data(row)
+        new_applicant = applicant_data(row, deposit)
         json_new_applicant = applicant_serializer.dump(new_applicant)
         del json_new_applicant["version"]
         if json_new_applicant not in database_data:
@@ -230,14 +231,15 @@ def get_new_applicants(applicants):
     return new_applicants
 
 
+
 # inserts values in the given dataframe to the database
-def insert_into_database(df, file_version=0):
+def insert_into_database(df, file_version=0, deposit=False):
     format_rows(df, file_version)
-    new_applicants = get_new_applicants(df)
+    new_applicants = get_new_applicants(df, deposit)
     add_to_database(new_applicants)
 
 
-def parse_to_models(df):
+def parse_to_models(df, deposit=False):
     df.dropna(how="all", inplace=True)
     df.reset_index(drop=True, inplace=True)
 
@@ -271,6 +273,6 @@ def parse_to_models(df):
             else f'{row["First Name"]}.{row["Last Name"]}@{fake.domain_name()}'
         )
         row["version"] = -1
-        new_applicant = applicant_data(row)
+        new_applicant = applicant_data(row, deposit)
         new_data.append(applicant_serializer.dump(new_applicant))
     return new_data
