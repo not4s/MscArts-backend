@@ -59,7 +59,7 @@ def csv_to_df(filename, is_csv):
         return df.rename(columns=col_names_map)
 
 
-def applicant_data(row):
+def applicant_data(row, deposit):
     return Applicant(
         version=row["version"],
         anticipated_entry_term=row["Anticipated Entry Term"],
@@ -69,7 +69,7 @@ def applicant_data(row):
         first_name=row["First Name"],
         last_name=row["Last Name"],
         gender=row["Gender"],
-        birth_date=self.convert_time(row["Birth Date"]),
+        birth_date=convert_time(row["Birth Date"]),
         nationality=row["Primary Nationality"],
         ethnicity=row["Ethnicity"],
         disability=row["Disability Type"],
@@ -95,6 +95,7 @@ def applicant_data(row):
         deferred=convert_time(row["Deferred Date"]),
         enrolled=convert_time(row["Enrolled Date"]),
         marked_complete=convert_time(row["Marked Complete Date"]),
+        deposit_paid=deposit,
     )
 
 def convert_time(time_str):
@@ -172,7 +173,7 @@ def format_rows(df, file_version):
     insert_missing_program_codes(df.groupby(["Programme Code", "Academic Program", "Type"]))
 
 # inserts values in the given dataframe to the database
-def insert_into_database(df, file_version=0, mock=False):
+def insert_into_database(df, file_version=0, mock=False, deposit=False):
     format_rows(df, file_version)
     new_data = []
     applicant_serializer = ApplicantSchema()
@@ -182,7 +183,7 @@ def insert_into_database(df, file_version=0, mock=False):
         del d["version"]
 
     for index, row in df.iterrows():
-        new_applicant = applicant_data(row)
+        new_applicant = applicant_data(row, deposit)
         json_new_applicant = applicant_serializer.dump(new_applicant)
         del json_new_applicant["version"]
         if json_new_applicant not in database_data:
@@ -191,7 +192,7 @@ def insert_into_database(df, file_version=0, mock=False):
     db.session.add_all(new_data)
     db.session.commit()
 
-def parse_to_models(df):
+def parse_to_models(df, deposit=False):
     df.dropna(how="all", inplace=True)
     df.reset_index(drop=True, inplace=True)
 
@@ -225,7 +226,7 @@ def parse_to_models(df):
             else f'{row["First Name"]}.{row["Last Name"]}@{fake.domain_name()}'
         )
         row["version"] = -1
-        new_applicant = applicant_data(row)
+        new_applicant = applicant_data(row, deposit)
         new_data.append(applicant_serializer.dump(new_applicant))
     return new_data
 
