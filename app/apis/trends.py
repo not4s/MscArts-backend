@@ -19,78 +19,76 @@ admissions_cycle_end = date(2023, 7, 31)
 
 @trends_api.route("/", methods=["GET"])
 class TrendsApi(Resource):
-    def get(self):
-      query = base_query()
+  def get(self):
+    query = base_query()
 
-      unit = request.args.get("unit", type=int)
-      period = request.args.get("period", default="year", type=str).lower()
-      series = request.args.get("series", default=None, type=str)
-      program_code = request.args.get("code", default=None, type=str)
-      cumulative = request.args.get("cumulative", default=1, type=int)
-      gender = request.args.get("gender", default=None, type=str)
-      fee_status = request.args.get("fee_status", default=None, type=str)
-      nationality = request.args.get("nationality", default=None, type=str)
-      decision_status = request.args.get("decision_status", default=None, type=str)
+    unit = request.args.get("unit", type=int)
+    period = request.args.get("period", default="year", type=str).lower()
+    series = request.args.get("series", default=None, type=str)
+    cumulative = request.args.get("cumulative", default=1, type=int)
+    gender = request.args.get("gender", default=None, type=str)
+    fee_status = request.args.get("fee_status", default=None, type=str)
+    nationality = request.args.get("nationality", default=None, type=str)
 
-      if decision_status is not None and decision_status.lower() != "all":
-        query = query.filter(Applicant.decision_status == decision_status)
-        
-      if program_code is not None and program_code.lower() != "all":
-        program_codes = [program_deserializer.dump(d)['code'] for d in db.session.query(Program).filter(Program.program_type == program_code)]
-        print(program_codes)
-        query = query.filter(Applicant.program_code.in_(program_codes))
+    program_type_filter = request.args.get("program_type", default=None, type=str)
+    decision_status_filter = request.args.get(
+      "decision_status", default=None, type=str
+    )
+    custom_decision = request.args.get("custom_decision", default=None, type=str)
+
+    applicants = fetch_applicants(
+      program_type_filter, decision_status_filter, custom_decision
+    )
+
+    if not series:
+      if gender is not None:
+        applicants = list(filter(lambda x: x['gender'] == gender, applicants))
+
+      if nationality is not None:
+        applicants = list(filter(lambda x: x['nationality'] == nationality, applicants))
       
-      if not series:
-        if gender is not None:
-          query = query.filter(Applicant.gender == gender)
-
-        if fee_status is not None:
-          query = query.filter(Applicant.combined_fee_status == fee_status)
-
-        if nationality is not None:
-          query = query.filter(Applicant.nationality == nationality)
-        
+      if fee_status is not None:
+        applicants = list(filter(lambda x: x['fee_status'] == fee_status, applicants))
       
-      if not unit:
-        # return all years data
-        return all_year_data(query, series, cumulative), 200
+    if not unit:
+      # return all years data
+      return all_year_data(query, series, cumulative), 200
 
-      today = date.today()
+    today = date.today()
 
-      if period == "year":
-        old_date = today - relativedelta(years = unit)
-      elif period == "month":
-        old_date = today - relativedelta(months = unit)
-      elif period == "week":
-        old_date = today - relativedelta(weeks = unit)
-      elif period == "day":
-        old_date = today - relativedelta(days = unit)
+    if period == "year":
+      old_date = today - relativedelta(years = unit)
+    elif period == "month":
+      old_date = today - relativedelta(months = unit)
+    elif period == "week":
+      old_date = today - relativedelta(weeks = unit)
+    elif period == "day":
+      old_date = today - relativedelta(days = unit)
 
-      applicants = [applicant_deserializer.dump(d) for d in query.filter(Applicant.submitted > old_date)]      
-      if series:
-        applicants = list(map(lambda x: {'submitted': datetime.strptime(x['submitted'], "%Y-%m-%d").date(), 'series': x[series]}, applicants))
-        series = set([applicant_deserializer.dump(d)[series] for d in db.session.query(Applicant)])
-      else:
-        applicants = list(map(lambda x: {'submitted': datetime.strptime(x['submitted'], "%Y-%m-%d").date(), 'series': 'ALL'}, applicants))
-        series = set(['ALL'])
+    applicants = list(filter(lambda x: datetime.strptime(x['submitted'], "%Y-%m-%d").date() > old_date, applicants))
+    if series:
+      applicants = list(map(lambda x: {'submitted': datetime.strptime(x['submitted'], "%Y-%m-%d").date(), 'series': x[series]}, applicants))
+      series = set([applicant_deserializer.dump(d)[series] for d in db.session.query(Applicant)])
+    else:
+      applicants = list(map(lambda x: {'submitted': datetime.strptime(x['submitted'], "%Y-%m-%d").date(), 'series': 'ALL'}, applicants))
+      series = set(['ALL'])
 
-      data = []
-      if period == "year":
-        data = split_into_year(unit, old_date, applicants, series, cumulative)
-      elif period == "month":
-        data = split_into_month(unit, old_date, applicants, series, cumulative)
-      elif period == "week":
-        data = split_into_week(unit, old_date, applicants, series, cumulative)
-      elif period == "day":
-        data = split_into_day(unit, old_date, applicants, series, cumulative)
+    data = []
+    if period == "year":
+      data = split_into_year(unit, old_date, applicants, series, cumulative)
+    elif period == "month":
+      data = split_into_month(unit, old_date, applicants, series, cumulative)
+    elif period == "week":
+      data = split_into_week(unit, old_date, applicants, series, cumulative)
+    elif period == "day":
+      data = split_into_day(unit, old_date, applicants, series, cumulative)
 
-      return data, 200
+    return data, 200
 
-def all_year_data(query, series, cumulative):
+def all_year_data(applicants, series, cumulative):
   years_data = [applicant_deserializer.dump(d) for d in db.session.query(Applicant.admissions_cycle).distinct()]
   if cumulative == 1:
     series_total = dict.fromkeys(series, 0)
-  applicants = [applicant_deserializer.dump(d) for d in query.all()]
   if series is not None:
     series_data = set([applicant_deserializer.dump(d)[series] for d in db.session.query(Applicant)])
     applicants = list(map(lambda x: {'admissions_cycle': x['admissions_cycle'], series: x[series]}, applicants))
