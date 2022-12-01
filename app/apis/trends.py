@@ -53,7 +53,7 @@ class TrendsApi(Resource):
       
       if not unit:
         # return all years data
-        return all_year_data(query, series), 200
+        return all_year_data(query, series, cumulative), 200
 
       today = date.today()
 
@@ -86,19 +86,29 @@ class TrendsApi(Resource):
 
       return data, 200
 
-def all_year_data(query, series):
+def all_year_data(query, series, cumulative):
   years_data = [applicant_deserializer.dump(d) for d in db.session.query(Applicant.admissions_cycle).distinct()]
+  if cumulative == 1:
+    series_total = dict.fromkeys(series, 0)
+  applicants = [applicant_deserializer.dump(d) for d in query.all()]
   if series is not None:
-    series_data = [applicant_deserializer.dump(d) for d in db.session.query(Applicant.gender).distinct()]
+    series_data = set([applicant_deserializer.dump(d)[series] for d in db.session.query(Applicant)])
+    applicants = list(map(lambda x: {'admissions_cycle': x['admissions_cycle'], series: x[series]}, applicants))
+  else:
+    series_data = ["ALL"]
+    applicants = list(map(lambda x: {'admissions_cycle': x['admissions_cycle'], series: 'ALL'}, applicants))
+
   data = []
   for year_data in years_data:
     year = year_data["admissions_cycle"]
-    if series:
-      for s in series_data:
-        series = s["gender"]
-        data.append({"period": year, "series": series, "count": query.filter(Applicant.admissions_cycle == year, Applicant.gender == series).count()})
-    else:
-        data.append({"period": year, "count": query.filter(Applicant.admissions_cycle == year).count()})
+
+    for s in series_data:
+      count = len([x for x in applicants if x['admissions_cycle'] == year and x['series'] == s])
+      if cumulative == 1:
+        series_total[s] += count
+        count = series_total[s]
+      
+      data.append({"period": year, "series": s, "count": count})
   
   return data
   
@@ -122,6 +132,7 @@ def split_into_year(unit, today, data_since_old_date, series, cumulative):
       "count": count})
     lower_bound = upper_bound
     upper_bound = upper_bound + relativedelta(years = 1)
+    unit -= 1
   return data
 
 def split_into_month(unit, today, data_since_old_date, series, cumulative, upper_bound_inclusive=True):
