@@ -5,7 +5,7 @@ from app import api
 from app.database import db
 from flask import request, abort
 from flask_restx import Resource
-from app.utils.parser import Parser
+from app.utils.parser import csv_to_df, insert_into_database, parse_to_models
 from app.apis.user import write_access_required, admin_required
 from werkzeug.utils import secure_filename
 from app.models.applicant import Applicant, Program
@@ -43,9 +43,9 @@ class MockUploadApi(Resource):
             abort(406, description="No File found")
 
         if file and validate_file(file):
-            parser = Parser()
-            df = parser.csv_to_df(file, is_csv=file.filename.endswith(".csv"))
-            data = Parser.parse_to_models(df)
+            df = csv_to_df(file, is_csv=file.filename.endswith(".csv"))
+            data = parse_to_models(df)
+
 
         progs = [
             {"code": d.code, "program_type": d.program_type}
@@ -81,16 +81,19 @@ class UploadApi(Resource):
 
         if file.filename == "":
             abort(406, description="No File found")
+        
+        deposit = request.form.get("type") == "DEPOSIT"
 
         if file and validate_file(file):
-            new_file = FileControl(name=secure_filename(file.filename))
+            new_file = FileControl(name=secure_filename(file.filename),
+                                   filetype="Deposit" if deposit else "Applicant")
             db.session.add(new_file)
             db.session.commit()
 
             try:
-                parser = Parser()
-                df = parser.csv_to_df(file, is_csv=file.filename.endswith(".csv"))
-                parser.insert_into_database(df, new_file.version)
+                df = csv_to_df(file, is_csv=file.filename.endswith(".csv"))
+                insert_into_database(df, new_file.version, deposit)
+
             except:
                 db.session.delete(new_file)
                 db.session.commit()
