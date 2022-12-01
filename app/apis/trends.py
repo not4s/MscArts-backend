@@ -19,115 +19,127 @@ admissions_cycle_end = date(2023, 7, 31)
 
 @trends_api.route("/", methods=["GET"])
 class TrendsApi(Resource):
-    def get(self):
-      query = base_query()
+  def get(self):
+    query = base_query()
 
-      unit = request.args.get("unit", type=int)
-      period = request.args.get("period", default="year", type=str).lower()
-      series = request.args.get("series", default=None, type=str)
-      program_code = request.args.get("code", default=None, type=str)
-      cumulative = request.args.get("cumulative", default=True, type=bool)
-      gender = request.args.get("gender", default=None, type=str)
-      fee_status = request.args.get("fee_status", default=None, type=str)
-      nationality = request.args.get("nationality", default=None, type=str)
-      decision_status = request.args.get("decision_status", default=None, type=str)
+    unit = request.args.get("unit", type=int)
+    period = request.args.get("period", default="year", type=str).lower()
+    series = request.args.get("series", default=None, type=str)
+    cumulative = request.args.get("cumulative", default=1, type=int)
+    gender = request.args.get("gender", default=None, type=str)
+    fee_status = request.args.get("fee_status", default=None, type=str)
+    nationality = request.args.get("nationality", default=None, type=str)
 
-      if decision_status is not None and decision_status.lower() != "all":
-        query = query.filter(Applicant.decision_status == decision_status)
-        
-      if program_code is not None and program_code.lower() != "all":
-        program_codes = [program_deserializer.dump(d)['code'] for d in db.session.query(Program).filter(Program.program_type == program_code)]
-        print(program_codes)
-        query = query.filter(Applicant.program_code.in_(program_codes))
+    program_type_filter = request.args.get("program_type", default=None, type=str)
+    decision_status_filter = request.args.get(
+      "decision_status", default=None, type=str
+    )
+    custom_decision = request.args.get("custom_decision", default=None, type=str)
+
+    applicants = fetch_applicants(
+      program_type_filter, decision_status_filter, custom_decision
+    )
+
+    if not series:
+      if gender is not None:
+        applicants = list(filter(lambda x: x['gender'] == gender, applicants))
+
+      if nationality is not None:
+        applicants = list(filter(lambda x: x['nationality'] == nationality, applicants))
       
-      if not series:
-        if gender is not None:
-          query = query.filter(Applicant.gender == gender)
-
-        if fee_status is not None:
-          query = query.filter(Applicant.combined_fee_status == fee_status)
-
-        if nationality is not None:
-          query = query.filter(Applicant.nationality == nationality)
-        
+      if fee_status is not None:
+        applicants = list(filter(lambda x: x['fee_status'] == fee_status, applicants))
       
-      if not unit:
-        # return all years data
-        return all_year_data(query, series), 200
+    if not unit:
+      # return all years data
+      return all_year_data(query, series, cumulative), 200
 
-      today = date.today()
+    today = date.today()
 
-      if period == "year":
-        old_date = today - relativedelta(years = unit)
-      elif period == "month":
-        old_date = today - relativedelta(months = unit)
-      elif period == "week":
-        old_date = today - relativedelta(weeks = unit)
-      elif period == "day":
-        old_date = today - relativedelta(days = unit)
+    if period == "year":
+      old_date = today - relativedelta(years = unit)
+    elif period == "month":
+      old_date = today - relativedelta(months = unit)
+    elif period == "week":
+      old_date = today - relativedelta(weeks = unit)
+    elif period == "day":
+      old_date = today - relativedelta(days = unit)
 
-      applicants = [applicant_deserializer.dump(d) for d in query.filter(Applicant.submitted > old_date)]      
-      if series:
-        applicants = list(map(lambda x: {'submitted': datetime.strptime(x['submitted'], "%Y-%m-%d").date(), 'series': x[series]}, applicants))
-        series = set([applicant_deserializer.dump(d)[series] for d in db.session.query(Applicant)])
-      else:
-        applicants = list(map(lambda x: {'submitted': datetime.strptime(x['submitted'], "%Y-%m-%d").date(), 'series': 'ALL'}, applicants))
-        series = set(['ALL'])
+    applicants = list(filter(lambda x: datetime.strptime(x['submitted'], "%Y-%m-%d").date() > old_date, applicants))
+    if series:
+      applicants = list(map(lambda x: {'submitted': datetime.strptime(x['submitted'], "%Y-%m-%d").date(), 'series': x[series]}, applicants))
+      series = set([applicant_deserializer.dump(d)[series] for d in db.session.query(Applicant)])
+    else:
+      applicants = list(map(lambda x: {'submitted': datetime.strptime(x['submitted'], "%Y-%m-%d").date(), 'series': 'ALL'}, applicants))
+      series = set(['ALL'])
 
-      data = []
-      if period == "year":
-        data = split_into_year(unit, today, applicants, series)
-      elif period == "month":
-        data = split_into_month(unit, today, applicants, series)
-      elif period == "week":
-        data = split_into_week(unit, today, applicants, series)
-      elif period == "day":
-        data = split_into_day(unit, today, applicants, series)
-      
-      if cumulative:
-        total = 0
-        for d in data[::-1]:
-          total += d["count"]
-          d["count"] = total
+    data = []
+    if period == "year":
+      data = split_into_year(unit, old_date, applicants, series, cumulative)
+    elif period == "month":
+      data = split_into_month(unit, old_date, applicants, series, cumulative)
+    elif period == "week":
+      data = split_into_week(unit, old_date, applicants, series, cumulative)
+    elif period == "day":
+      data = split_into_day(unit, old_date, applicants, series, cumulative)
 
-      return data, 200
+    return data, 200
 
-def all_year_data(query, series):
+def all_year_data(applicants, series, cumulative):
   years_data = [applicant_deserializer.dump(d) for d in db.session.query(Applicant.admissions_cycle).distinct()]
+  if cumulative == 1:
+    series_total = dict.fromkeys(series, 0)
   if series is not None:
-    series_data = [applicant_deserializer.dump(d) for d in db.session.query(Applicant.gender).distinct()]
+    series_data = set([applicant_deserializer.dump(d)[series] for d in db.session.query(Applicant)])
+    applicants = list(map(lambda x: {'admissions_cycle': x['admissions_cycle'], series: x[series]}, applicants))
+  else:
+    series_data = ["ALL"]
+    applicants = list(map(lambda x: {'admissions_cycle': x['admissions_cycle'], series: 'ALL'}, applicants))
+
   data = []
   for year_data in years_data:
     year = year_data["admissions_cycle"]
-    if series:
-      for s in series_data:
-        series = s["gender"]
-        data.append({"period": year, "series": series, "count": query.filter(Applicant.admissions_cycle == year, Applicant.gender == series).count()})
-    else:
-        data.append({"period": year, "count": query.filter(Applicant.admissions_cycle == year).count()})
+
+    for s in series_data:
+      count = len([x for x in applicants if x['admissions_cycle'] == year and x['series'] == s])
+      if cumulative == 1:
+        series_total[s] += count
+        count = series_total[s]
+      
+      data.append({"period": year, "series": s, "count": count})
   
   return data
   
 
-def split_into_year(unit, today, data_since_old_date, series):
+def split_into_year(unit, today, data_since_old_date, series, cumulative):
   data = []
-  upper_bound = today
-  lower_bound = today - relativedelta(years = 1)
+  lower_bound = today
+  upper_bound = today + relativedelta(years = 1)
+
+  if cumulative == 1:
+    series_total = dict.fromkeys(series, 0)
+
   while unit > 0:
     for s in series:
-      data.append({"period": (lower_bound + relativedelta(days = 1)).strftime("%m/%d/%Y"), 
+      count = len([x for x in data_since_old_date if x['submitted'] > lower_bound and x['submitted'] <= upper_bound and x['series'] == s])
+      if cumulative == 1:
+        series_total[s] += count
+        count = series_total[s]
+      data.append({"period": (lower_bound + relativedelta(days = 1)).strftime("%m/%d/%Y"),
       "series": s,
-      "count": len([x for x in data_since_old_date if x['submitted'] > lower_bound and x['submitted'] <= upper_bound and x['series'] == s])})
-    upper_bound = lower_bound
-    lower_bound = upper_bound - relativedelta(years = 1)
+      "count": count})
+    lower_bound = upper_bound
+    upper_bound = upper_bound + relativedelta(years = 1)
     unit -= 1
-
   return data
 
-def split_into_month(unit, today, data_since_old_date, series, upper_bound_inclusive=True):
+def split_into_month(unit, today, data_since_old_date, series, cumulative, upper_bound_inclusive=True):
   data = []
-  upper_bound = today
-  lower_bound = today - relativedelta(months = 1)
+  lower_bound = today
+  upper_bound = today + relativedelta(months = 1)
+
+  if cumulative == 1:
+    series_total = dict.fromkeys(series, 0)
   while unit > 0:
     for s in series:
       if (upper_bound_inclusive):
@@ -136,19 +148,25 @@ def split_into_month(unit, today, data_since_old_date, series, upper_bound_inclu
       else:
         count = len([x for x in data_since_old_date if x['submitted'] >= lower_bound and x['submitted'] < upper_bound and x['series'] == s])
         period = lower_bound.strftime("%m/%d")
+      if cumulative == 1:
+        series_total[s] += count
+        count = series_total[s]
       data.append({"period": period, 
       "series": s,
       "count": count})
-    upper_bound = lower_bound
-    lower_bound = upper_bound - relativedelta(months = 1)
+    lower_bound = upper_bound
+    upper_bound = lower_bound + relativedelta(months = 1)
     unit -= 1
 
   return data
 
-def split_into_week(unit, today, data_since_old_date, series, upper_bound_inclusive=True):
+def split_into_week(unit, today, data_since_old_date, series, cumulative, upper_bound_inclusive=True):
   data = []
-  upper_bound = today
-  lower_bound = today - relativedelta(weeks = 1)
+  lower_bound = today
+  upper_bound = today + relativedelta(weeks = 1)
+
+  if cumulative == 1:
+    series_total = dict.fromkeys(series, 0)
   while unit > 0:
     for s in series:
       if upper_bound_inclusive:
@@ -157,27 +175,38 @@ def split_into_week(unit, today, data_since_old_date, series, upper_bound_inclus
       else:
         count = len([x for x in data_since_old_date if x['submitted'] >= lower_bound and x['submitted'] < upper_bound and x['series'] == s])
         period = lower_bound.strftime("%m/%d")
+
+      if cumulative == 1:
+        series_total[s] += count
+        count = series_total[s]
       data.append({"period": period, 
       "series": s,
       "count": count})
-    upper_bound = lower_bound
-    lower_bound = upper_bound - relativedelta(weeks = 1)
+    lower_bound = upper_bound
+    upper_bound = lower_bound + relativedelta(weeks = 1)
     unit -= 1
 
   return data
 
-def split_into_day(unit, today, data_since_old_date, series, include_year=True):
+def split_into_day(unit, today, data_since_old_date, series, cumulative, include_year=True):
   data = []
   date = today
+
+  if cumulative == 1:
+    series_total = dict.fromkeys(series, 0)
   while unit > 0:
     for s in series:
       if include_year:
         period = date.strftime("%m/%d/%Y")
       else:
         period = date.strftime("%m/%d")
+      count = len([x for x in data_since_old_date if x['submitted'] == date and x['series'] == s])
+      if cumulative == 1:
+          series_total[s] += count
+          count = series_total[s]
       data.append({"period": period,
-      "count": len([x for x in data_since_old_date if x['submitted'] == date and x['series'] == s])})
-    date = date - relativedelta(days = 1)
+      "count": count})
+    date = date + relativedelta(days = 1)
     unit -= 1
 
   return data
@@ -203,94 +232,76 @@ def valid_timeframe(start, end):
 # for each "cycle", get all the data between start and end month for each period
 @trends_api.route("/cycle", methods=["GET"])
 class TrendsCycleApi(Resource):
-    def get(self):
-      # query = base_query()
+  def get(self):
+    period = request.args.get("period", default="month", type=str).lower()
+    cycles = request.args.get("cycle", default=None, type=str) # e.g. cycle=21,22,23
+    cumulative = request.args.get("cumulative", default=1, type=int)
+    start = request.args.get("start", default="10/01", type=str)
+    end = request.args.get("end", default="07/31", type=str)
+    series = request.args.get("series", default=None, type=str)
+    gender = request.args.get("gender", default=None, type=str)
+    fee_status = request.args.get("fee_status", default=None, type=str)
+    nationality = request.args.get("nationality", default=None, type=str)
 
-      period = request.args.get("period", default="month", type=str).lower()
-      cycles = request.args.get("cycle", default=None, type=str) # e.g. cycle=21,22,23
-      cumulative = request.args.get("cumulative", default=True, type=bool)
-      start = request.args.get("start", default="10/01", type=str)
-      end = request.args.get("end", default="07/31", type=str)
-      series = request.args.get("series", default=None, type=str)
-      # program_code = request.args.get("code", default=None, type=str)
-      gender = request.args.get("gender", default=None, type=str)
-      fee_status = request.args.get("fee_status", default=None, type=str)
-      nationality = request.args.get("nationality", default=None, type=str)
+    program_type_filter = request.args.get("program_type", default=None, type=str)
+    decision_status_filter = request.args.get(
+      "decision_status", default=None, type=str
+    )
+    custom_decision = request.args.get("custom_decision", default=None, type=str)
 
-      program_type_filter = request.args.get("program_type", default=None, type=str)
-      decision_status_filter = request.args.get(
-        "decision_status", default=None, type=str
+    if not valid_timeframe(start, end):
+      return {"message": "Invalid time frame given"}, 400
+    
+    cycles = cycles.split(",")
+    cycles = ["20" + cycle for cycle in cycles]
+    data = []
+
+    if series:
+      series_types = set([applicant_deserializer.dump(d)[series] for d in db.session.query(Applicant)])
+    else:
+      series_types = set(['ALL'])
+
+    for cycle in cycles:
+      applicants = fetch_applicants(
+        program_type_filter, decision_status_filter, custom_decision, year=int(cycle)
       )
-      custom_decision = request.args.get("custom_decision", default=None, type=str)
-
-      if not valid_timeframe(start, end):
-        return {"message": "Invalid time frame given"}, 400
-      
-      cycles = cycles.split(",")
-      cycles = ["20" + cycle for cycle in cycles]
-      data = []
-
       if series:
-        series_types = set([applicant_deserializer.dump(d)[series] for d in db.session.query(Applicant)])
+        applicants = list(map(lambda x: {'submitted': datetime.strptime(x['submitted'], "%Y-%m-%d").date(), 'series': x[series]}, applicants))
       else:
-        series_types = set(['ALL'])
-
-      for cycle in cycles:
-        print(cycle)
-        applicants = fetch_applicants(
-          program_type_filter, decision_status_filter, custom_decision, year=int(cycle)
-        )
-        print(len(applicants))
-        # applicants = [applicant_deserializer.dump(d) for d in query.filter(Applicant.admissions_cycle == int(cycle))]
-        if series:
-          applicants = list(map(lambda x: {'submitted': datetime.strptime(x['submitted'], "%Y-%m-%d").date(), 'series': x[series]}, applicants))
-        else:
-          if gender is not None:
-            applicants = list(filter(lambda x: x['gender'] == gender, applicants))
-          
-          if fee_status is not None:
-            applicants = list(filter(lambda x: x['combined_fee_status'] == fee_status, applicants))
-          
-          if nationality is not None:
-            applicants = list(filter(lambda x: x['nationality'] == nationality, applicants))
-
-          applicants = list(map(lambda x: {'submitted': datetime.strptime(x['submitted'], "%Y-%m-%d").date(), 'series': 'ALL'}, applicants))
-
-        if start < "10/01":
-          start_date = datetime.strptime(f"{cycle}/{start}", "%Y/%m/%d").date()
-        else:
-          start_date = datetime.strptime(f"{int(cycle) - 1}/{start}", "%Y/%m/%d").date()
+        if gender is not None:
+          applicants = list(filter(lambda x: x['gender'] == gender, applicants))
         
-        if end <= "07/31":
-          end_date = datetime.strptime(f"{cycle}/{end}", "%Y/%m/%d").date()
-        else:
-          end_date = datetime.strptime(f"{int(cycle) - 1}/{end}", "%Y/%m/%d").date()
+        if fee_status is not None:
+          applicants = list(filter(lambda x: x['combined_fee_status'] == fee_status, applicants))
         
-        unit = get_unit(start_date, end_date, period)
+        if nationality is not None:
+          applicants = list(filter(lambda x: x['nationality'] == nationality, applicants))
 
-        if period == "month":
-          today = start_date + relativedelta(months=unit)
-        elif period == "week":
-          today = start_date + relativedelta(weeks=unit)
-        elif period == "day":
-          today = start_date + relativedelta(days=unit)
+        applicants = list(map(lambda x: {'submitted': datetime.strptime(x['submitted'], "%Y-%m-%d").date(), 'series': 'ALL'}, applicants))
 
-        if period == "month":
-          new_data = split_into_month(unit, today, applicants, series_types, upper_bound_inclusive=False)
-        elif period == "week":
-          new_data = split_into_week(unit, today, applicants, series_types, upper_bound_inclusive=False)
-        elif period == "day":
-          new_data = split_into_day(unit, today, applicants, series_types, include_year=False)
-        
-        if cumulative:
-          total = 0
-          for d in new_data[::-1]:
-            total += d["count"]
-            d["series"] = cycle
-            d["count"] = total
-        
+      if start < "10/01":
+        start_date = datetime.strptime(f"{cycle}/{start}", "%Y/%m/%d").date()
+      else:
+        start_date = datetime.strptime(f"{int(cycle) - 1}/{start}", "%Y/%m/%d").date()
+      
+      if end <= "07/31":
+        end_date = datetime.strptime(f"{cycle}/{end}", "%Y/%m/%d").date()
+      else:
+        end_date = datetime.strptime(f"{int(cycle) - 1}/{end}", "%Y/%m/%d").date()
+      
+      unit = get_unit(start_date, end_date, period)
+
+      if period == "month":
+        new_data = split_into_month(unit, start_date, applicants, series_types, cumulative, upper_bound_inclusive=False)
+      elif period == "week":
+        new_data = split_into_week(unit, start_date, applicants, series_types, cumulative, upper_bound_inclusive=False)
+      elif period == "day":
+        new_data = split_into_day(unit, start_date, applicants, series_types, cumulative, include_year=False)
+      
+      if series is None:
         for d in new_data:
           d["series"] = cycle
-          data.append(d)
-      return data, 200
+      
+      data += new_data
+    return data, 200
       
